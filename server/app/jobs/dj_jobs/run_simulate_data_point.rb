@@ -1,36 +1,6 @@
 # *******************************************************************************
-# OpenStudio(R), Copyright (c) 2008-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# (1) Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-#
-# (2) Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-#
-# (3) Neither the name of the copyright holder nor the names of any contributors
-# may be used to endorse or promote products derived from this software without
-# specific prior written permission from the respective party.
-#
-# (4) Other than as required in clauses (1) and (2), distributions in any form
-# of modifications or other derivative works may not use the "OpenStudio"
-# trademark, "OS", "os", or any other confusingly similar designation without
-# specific prior written permission from Alliance for Sustainable Energy, LLC.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER, THE UNITED STATES
-# GOVERNMENT, OR ANY CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-# EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# OpenStudio(R), Copyright (c) Alliance for Sustainable Energy, LLC.
+# See also https://openstudio.net/license
 # *******************************************************************************
 
 # Command line based interface to execute the Workflow manager.
@@ -208,7 +178,12 @@ module DjJobs
               uo_process_log = File.join(simulation_dir, 'urbanopt_process.log')
               run_urbanopt(uo_simulation_log, uo_process_log)
             else  #OS CLI workflow
-              cmd = "#{Utility::Oss.oscli_cmd(@sim_logger)} #{@data_point.analysis.cli_verbose} run --workflow #{osw_path} #{@data_point.analysis.cli_debug}"
+              @sim_logger.info "analysis is configured with #{@data_point.analysis.to_json}"
+              if @data_point.analysis.gemfile
+                cmd = "#{Utility::Oss.oscli_cmd_bundle_args(@sim_logger, analysis_dir)} classic #{@data_point.analysis.cli_verbose} run --workflow #{osw_path} #{@data_point.analysis.cli_debug}"
+              else
+                cmd = "#{Utility::Oss.oscli_cmd_no_bundle_args(@sim_logger)} classic #{@data_point.analysis.cli_verbose} run --workflow #{osw_path} #{@data_point.analysis.cli_debug}"
+              end
               process_log = File.join(simulation_dir, 'oscli_simulation.log')
               @sim_logger.info "Running workflow using cmd #{cmd} and writing log to #{process_log}"
               oscli_env_unset = Hash[Utility::Oss::ENV_VARS_TO_UNSET_FOR_OSCLI.collect{|x| [x,nil]}]
@@ -314,10 +289,10 @@ module DjJobs
           # Post the reports back to the server
           uploads_successful = []
           if @data_point.analysis.download_reports
-            @sim_logger.info 'downloading reports/*.{html,json,csv}'
-            Dir["#{simulation_dir}/reports/*.{html,json,csv}"].each { |rep| uploads_successful << upload_file(rep, 'Report') }
+            @sim_logger.info 'downloading reports/*.{html,json,csv,xml,mat}'
+            Dir["#{simulation_dir}/reports/*.{html,json,csv,xml,mat}"].each { |rep| uploads_successful << upload_file(rep, 'Report') }
           else
-            @sim_logger.info "NOT downloading /reports/*.{html,json,csv} since download_reports value is: #{@data_point.analysis.download_reports}"
+            @sim_logger.info "NOT downloading /reports/*.{html,json,csv,xml,mat} since download_reports value is: #{@data_point.analysis.download_reports}"
           end
           report_file = "#{run_dir}/objectives.json"
           uploads_successful << upload_file(report_file, 'Report', 'objectives', 'application/json') if File.exist?(report_file)
@@ -380,12 +355,22 @@ module DjJobs
         @data_point.set_error_flag
         @data_point.sdp_log_file = File.read(run_log_file).lines if File.exist? run_log_file
       ensure
+        @sim_logger.info "cleaning up /tmp directory"
+        #remove xmlvalidation directories left in /tmp from OS
+        pattern = '/tmp/xmlvalidation*'
+        # Find and remove directories matching the pattern
+        Dir.glob(pattern).each do |dir|
+          if File.directory?(dir)
+            FileUtils.rm_rf(dir)
+          end
+        end
         @sim_logger&.info "Finished #{__FILE__}"
         @data_point&.set_complete_state
-        @sim_logger.info "@data_point: #{@data_point.to_json}"
         @sim_logger&.close
         report_file = "#{simulation_dir}/#{@data_point.id}.log"
         upload_file(report_file, 'Report', 'Datapoint Simulation Log', 'application/text') if File.exist?(report_file)
+        #delete the simulation directory (default is true)
+        FileUtils.rm_rf simulation_dir if @data_point.analysis.delete_simulation_dir
         true
       end
     end
@@ -523,6 +508,8 @@ module DjJobs
 
         # Run the server data_point initialization script with defined arguments, if it exists.
         run_script_with_args 'initialize'
+        run_bundle_gems if @data_point.analysis.gemfile
+      
       end
 
       @sim_logger.info 'Finished worker initialization'
@@ -666,6 +653,30 @@ module DjJobs
       if File.exist? log_path
         @data_point.worker_logs[script_name] = File.read(log_path).lines
       end
+    end
+
+    def run_bundle_gems
+      @sim_logger.info "Installing gems" 
+      if File.file? "#{analysis_dir}/Gemfile"
+        @sim_logger.info "Gemfile found in: #{analysis_dir}"
+      else
+        @sim_logger.info "Gemfile not found at #{analysis_dir}" 
+        return false
+      end
+
+      log_path = "#{analysis_dir}/bundle.log"
+      cmd = "bundle install --gemfile=#{analysis_dir}/Gemfile --path=#{analysis_dir}/gems"
+      oscli_env_unset = Hash[Utility::Oss::ENV_VARS_TO_UNSET_FOR_OSCLI.collect{|x| [x,nil]}]
+      @sim_logger.info "Bundle install command: #{cmd}"
+      pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [log_path, 'w'])
+      Process.wait pid
+      @sim_logger.info "gem installation complete" 
+      @sim_logger.info File.read(log_path).lines
+
+    rescue StandardError => e
+      msg = "Error #{e.message} running #{cmd}: #{e.backtrace.join("\n")}"
+      @sim_logger.error msg
+      raise msg
     end
   end
 end

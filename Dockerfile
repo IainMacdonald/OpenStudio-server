@@ -4,17 +4,17 @@
 # NOTES:            Currently this is one big dockerfile and non-optimal.
 
 #may include suffix
-ARG OPENSTUDIO_VERSION=3.5.0
-FROM nrel/openstudio:3.5.0 as base
+ARG OPENSTUDIO_VERSION=3.7.0
+FROM nrel/openstudio:3.7.0 as base
 MAINTAINER Nicholas Long nicholas.long@nrel.gov
 
 ENV DEBIAN_FRONTEND=noninteractive
 # Install required libaries.
 #   realpath - needed for wait-for-it
 RUN apt-get update && apt-get install -y wget gnupg \
-    && wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | apt-key add - \
-    && echo "deb http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | \
-    tee /etc/apt/sources.list.d/mongodb-org-4.4.list \
+    && wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add - \
+    && echo "deb http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | \
+    tee /etc/apt/sources.list.d/mongodb-org-6.0.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         apt-transport-https \
@@ -59,7 +59,7 @@ RUN apt-get update && apt-get install -y wget gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install passenger (this also installs nginx)
-ENV PASSENGER_VERSION 6.0.2
+ENV PASSENGER_VERSION 6.0.18
 
 RUN gem install passenger -v $PASSENGER_VERSION
 RUN passenger-install-nginx-module
@@ -104,7 +104,7 @@ RUN bundle exec rake assets:precompile
 # Bundle app source
 ADD /server /opt/openstudio/server
 # Add in /spec for testing 
-#ADD /spec /opt/openstudio/spec
+#ADD /server/spec /opt/openstudio/server/spec
 ADD .rubocop.yml /opt/openstudio/.rubocop.yml
 # Run bundle again, because if the user has a local Gemfile.lock it will have been overriden
 RUN rm Gemfile.lock
@@ -127,6 +127,10 @@ RUN chmod 755 /usr/local/bin/start-workers
 # set the permissions for windows users
 RUN chmod +x /opt/openstudio/server/bin/*
 ENV OPENSTUDIO_EXE_PATH /usr/local/bin/openstudio
+
+# Remove leftover install files from openstudio base container
+RUN rm /OpenStudio-*.deb
+RUN rm /ruby-2.7.2.tar.gz
 
 ENTRYPOINT ["rails-entrypoint"]
 

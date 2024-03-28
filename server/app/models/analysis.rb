@@ -1,36 +1,6 @@
 # *******************************************************************************
-# OpenStudio(R), Copyright (c) 2008-2020, Alliance for Sustainable Energy, LLC.
-# All rights reserved.
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# (1) Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-#
-# (2) Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-#
-# (3) Neither the name of the copyright holder nor the names of any contributors
-# may be used to endorse or promote products derived from this software without
-# specific prior written permission from the respective party.
-#
-# (4) Other than as required in clauses (1) and (2), distributions in any form
-# of modifications or other derivative works may not use the "OpenStudio"
-# trademark, "OS", "os", or any other confusingly similar designation without
-# specific prior written permission from Alliance for Sustainable Energy, LLC.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER, THE UNITED STATES
-# GOVERNMENT, OR ANY CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-# EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# OpenStudio(R), Copyright (c) Alliance for Sustainable Energy, LLC.
+# See also https://openstudio.net/license
 # *******************************************************************************
 
 class Analysis
@@ -57,7 +27,9 @@ class Analysis
   field :download_zip, type: Boolean, default: true
   field :download_osm, type: Boolean, default: true
   field :download_osw, type: Boolean, default: true
+  field :gemfile, type: Boolean, default: false
   field :download_reports, type: Boolean, default: true
+  field :delete_simulation_dir, type: Boolean, default: true # delete the simulation directory in the workers after everything is done
   field :variable_display_name_choice, type: String, default: 'display_name'
 
   # Hash of the jobs to run for the analysis
@@ -100,7 +72,7 @@ class Analysis
 
   # Indexes
   index({ uuid: 1 }, unique: true)
-  index(id: 1)
+  #index(id: 1)
   index(name: 1)
   index(created_at: 1)
   index(updated_at: -1)
@@ -111,6 +83,7 @@ class Analysis
   validates_attachment_content_type :seed_zip, content_type: ['application/zip']
 
   # Callbacks
+  before_create :set_uuid_from_id
   after_create :verify_uuid
   before_destroy :queue_delete_files
 
@@ -505,7 +478,9 @@ class Analysis
       retry if extract_count < extract_max_count
       raise "Extraction of the seed.zip file failed #{extract_max_count} times with error #{e.message}"
     end
+     
     run_script_with_args 'initialize'
+    
   end
 
   # runs on web node
@@ -537,6 +512,10 @@ class Analysis
     end
   end
 
+  def set_uuid_from_id
+    self.uuid = id
+  end
+  
   def verify_uuid
     self.uuid = id if uuid.nil?
     save!
