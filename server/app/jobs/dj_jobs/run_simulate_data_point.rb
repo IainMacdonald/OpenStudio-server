@@ -25,11 +25,14 @@ module DjJobs
       FileUtils.mkdir_p simulation_dir unless Dir.exist? simulation_dir
       FileUtils.rm_rf run_dir if Dir.exist? run_dir
       FileUtils.mkdir_p run_dir unless Dir.exist? run_dir
+      # Logger for the simulate datapoint
+      @sim_logger = Logger.new("#{simulation_dir}/#{@data_point.id}.log")
     end
 
     def perform
-      # Logger for the simulate datapoint; moved here so it would also work with delayed jobs https://github.com/NREL/OpenStudio-server/issues/737
-      @sim_logger = Logger.new("#{simulation_dir}/#{@data_point.id}.log")
+      # Logger for the simulate datapoint; create or append so it would also work with delayed jobs https://github.com/NREL/OpenStudio-server/issues/737
+      @sim_logger = Logger.new(File.open("#{simulation_dir}/#{@data_point.id}.log", File::WRONLY | File::APPEND | File::CREAT))
+
 
       # Error if @datapoint doesn't exist
       if @data_point.nil?
@@ -614,7 +617,7 @@ module DjJobs
       rescue StandardError => e
         sleep Random.new.rand(1.0..10.0)
         retry if upload_file_attempt < upload_file_max_attempt
-        @sim_logger.error "Could not save report #{display_name} with message: #{e.message} in #{e.backtrace.join("\n")}"
+        @sim_logger&.error "Could not save report #{display_name} with message: #{e.message} in #{e.backtrace.join("\n")}"
         return false
       end
     end
@@ -639,7 +642,7 @@ module DjJobs
       end
     rescue StandardError => e
       msg = "Error #{e.message} running #{script_name}: #{e.backtrace.join("\n")}"
-      @sim_logger.error msg
+      @sim_logger&.error msg
       raise msg
     ensure
       # save the log information to the datapoint if it exists
@@ -668,7 +671,7 @@ module DjJobs
 
     rescue StandardError => e
       msg = "Error #{e.message} running #{cmd}: #{e.backtrace.join("\n")}"
-      @sim_logger.error msg
+      @sim_logger&.error msg
       raise msg
     end
   end
