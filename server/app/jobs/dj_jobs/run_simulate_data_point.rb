@@ -25,12 +25,15 @@ module DjJobs
       FileUtils.mkdir_p simulation_dir unless Dir.exist? simulation_dir
       FileUtils.rm_rf run_dir if Dir.exist? run_dir
       FileUtils.mkdir_p run_dir unless Dir.exist? run_dir
-
       # Logger for the simulate datapoint
       @sim_logger = Logger.new("#{simulation_dir}/#{@data_point.id}.log")
     end
 
     def perform
+      # Logger for the simulate datapoint; create or append so it would also work with delayed jobs https://github.com/NREL/OpenStudio-server/issues/737
+      @sim_logger = Logger.new(File.open("#{simulation_dir}/#{@data_point.id}.log", File::WRONLY | File::APPEND | File::CREAT))
+
+
       # Error if @datapoint doesn't exist
       if @data_point.nil?
         @sim_logger = 'Could not find datapoint; @datapoint was nil'
@@ -43,7 +46,6 @@ module DjJobs
       @sim_logger.info "Server host is #{APP_CONFIG['os_server_host_url']}"
       @sim_logger.info "Analysis directory is #{analysis_dir}"
       @sim_logger.info "Simulation directory is #{simulation_dir}"
-      @sim_logger.info "Run datapoint type/file is #{@options[:run_workflow_method]}"
 
       # If worker initialization fails, communicate this information
       # to the user via the out.osw.
@@ -90,12 +92,12 @@ module DjJobs
       end
 
       # delete any existing data files from the server in case this is a 'rerun'
-      @sim_logger.info 'RestClient delete'
+      @sim_logger.info 'calling RestClient.delete in case this is a rerun to delete the /result_files directory'
       post_count = 0
       post_count_max = 50
       begin
         post_count += 1
-        @sim_logger.info "delete post_count = #{post_count}"
+        @sim_logger.info "delete post_count = #{post_count}; max is 50"
         RestClient.delete "#{APP_CONFIG['os_server_host_url']}/data_points/#{@data_point.id}/result_files"
       rescue StandardError => e
         sleep Random.new.rand(1.0..10.0)
@@ -156,9 +158,9 @@ module DjJobs
       end
       @sim_logger.info 'Creating Workflow Manager instance'
       @sim_logger.info "Directory is #{simulation_dir}"
+      # this is the run.log from the OSCLI
       run_log_file = File.join(run_dir, 'run.log')
-      @sim_logger.info "Opening run.log file '#{run_log_file}'"
-      # add check for valid CLI option or ""
+      # check for valid CLI option or ""
       unless ['', '--debug'].include?(@data_point.analysis.cli_debug)
         @sim_logger.warn "CLI_Debug option: #{@data_point.analysis.cli_debug} is not valid.  Using --debug instead."
         @data_point.analysis.cli_debug = '--debug'
@@ -167,68 +169,68 @@ module DjJobs
         @sim_logger.warn "CLI_Verbose option: #{@data_point.analysis.cli_verbose} is not valid.  Using --verbose instead."
         @data_point.analysis.cli_verbose = '--verbose'
       end
-      # Fail gracefully if the datapoint errors out by returning the zip and out.osw
+      # Entire workflow thru results handling
       begin
-        # Make sure to pass in preserve_run_dir
         run_result = nil
-        File.open(run_log_file, 'a') do |run_log|
-          begin
-            if @data_point.analysis.urbanopt
-              uo_simulation_log = File.join(simulation_dir, 'urbanopt_simulation.log')
-              uo_process_log = File.join(simulation_dir, 'urbanopt_process.log')
-              run_urbanopt(uo_simulation_log, uo_process_log)
-            else  #OS CLI workflow
-              @sim_logger.info "analysis is configured with #{@data_point.analysis.to_json}"
-              if @data_point.analysis.gemfile
-                cmd = "#{Utility::Oss.oscli_cmd_bundle_args(@sim_logger, analysis_dir)} classic #{@data_point.analysis.cli_verbose} run --workflow #{osw_path} #{@data_point.analysis.cli_debug}"
-              else
-                cmd = "#{Utility::Oss.oscli_cmd_no_bundle_args(@sim_logger)} classic #{@data_point.analysis.cli_verbose} run --workflow #{osw_path} #{@data_point.analysis.cli_debug}"
-              end
-              process_log = File.join(simulation_dir, 'oscli_simulation.log')
-              @sim_logger.info "Running workflow using cmd #{cmd} and writing log to #{process_log}"
-              oscli_env_unset = Hash[Utility::Oss::ENV_VARS_TO_UNSET_FOR_OSCLI.collect{|x| [x,nil]}]
-              pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [process_log, 'w'])
-              # add check for a valid timeout value
-              unless @data_point.analysis.run_workflow_timeout.positive?
-                @sim_logger.warn "run_workflow_timeout option: #{@data_point.analysis.run_workflow_timeout} is not valid.  Using 28800s instead."
-                @@data_point.analysis.run_workflow_timeout = 28800
-              end
-              Timeout.timeout(@data_point.analysis.run_workflow_timeout) do
-                Process.wait(pid)
-              end
-
-              if $?.exitstatus != 0
-                raise "Oscli returned error code #{$?.exitstatus}"
-              end
-            end  
-          rescue Timeout::Error
-            @sim_logger.error "Killing process for #{osw_path} due to timeout."
-            # openstudio process actually runs in a child of pid.  to prevent orphaned processes on timeout, we
-            # need to identify the child and kill it as well.
-            # exception handing and a lot of logging in case we discover cases with >1 child process or other behavior
-            # that is not currently handled.
-            begin
-              @sim_logger.info "looking up any children of timed out process #{pid}"
-              child_pid = `ps -o pid= --ppid "#{pid}"`.to_i
-              if child_pid > 0
-                @sim_logger.info "killing child #{child_pid} of timed out process #{pid}"
-                Process.kill('KILL', child_pid)
-              end
-              @sim_logger.info "killing timed out process #{pid}"
-              Process.kill('KILL', pid)
-            rescue Exception => e
-              @sim_logger.error "Error killing process #{pid}: #{e}"
+        # Call to the OSCLI or URBANopt
+        begin
+          if @data_point.analysis.urbanopt
+            uo_simulation_log = File.join(simulation_dir, 'urbanopt_simulation.log')
+            uo_process_log = File.join(simulation_dir, 'urbanopt_process.log')
+            run_urbanopt(uo_simulation_log, uo_process_log)
+          else  #OSCLI workflow
+            @sim_logger.info "analysis is configured with #{@data_point.analysis.to_json}"
+            if @data_point.analysis.gemfile
+              cmd = "#{Utility::Oss.oscli_cmd_bundle_args(@sim_logger, analysis_dir)} #{@data_point.analysis.cli_verbose} run --workflow #{osw_path} #{@data_point.analysis.cli_debug}"
+            else
+              cmd = "#{Utility::Oss.oscli_cmd_no_bundle_args(@sim_logger)} #{@data_point.analysis.cli_verbose} run --workflow #{osw_path} #{@data_point.analysis.cli_debug}"
+            end
+            process_log = File.join(simulation_dir, 'oscli_simulation.log')
+            @sim_logger.info "Running workflow using cmd #{cmd} and writing log to #{process_log}"
+            oscli_env_unset = Hash[Utility::Oss::ENV_VARS_TO_UNSET_FOR_OSCLI.collect{|x| [x,nil]}]
+            pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [process_log, 'w'])
+            # check for a valid timeout value
+            unless @data_point.analysis.run_workflow_timeout.positive?
+              @sim_logger.warn "run_workflow_timeout option: #{@data_point.analysis.run_workflow_timeout} is not valid.  Using 28800s instead."
+              @@data_point.analysis.run_workflow_timeout = 28800
+            end
+            Timeout.timeout(@data_point.analysis.run_workflow_timeout) do
+              Process.wait(pid)
             end
 
-            run_result = :errored
-          rescue ScriptError => e # This allows us to handle LoadErrors and SyntaxErrors in measures
-            log_message = "The workflow failed with script error #{e.message} in #{e.backtrace.join("\n")}"
-            @sim_logger&.error log_message
-            run_result = :errored
+            if $?.exitstatus != 0
+              raise "OSCLI returned error code #{$?.exitstatus}"
+            end
+          end  
+        rescue Timeout::Error
+          @sim_logger.error "Killing process for #{osw_path} due to timeout."
+          # openstudio process actually runs in a child of pid.  to prevent orphaned processes on timeout, we
+          # need to identify the child and kill it as well.
+          # exception handing and a lot of logging in case we discover cases with >1 child process or other behavior
+          # that is not currently handled.
+          begin
+            @sim_logger.info "looking up any children of timed out process #{pid}"
+            child_pid = `ps -o pid= --ppid "#{pid}"`.to_i
+            if child_pid > 0
+              @sim_logger.info "killing child #{child_pid} of timed out process #{pid}"
+              Process.kill('KILL', child_pid)
+            end
+            @sim_logger.info "killing timed out process #{pid}"
+            Process.kill('KILL', pid)
           rescue Exception => e
-            @sim_logger.error "Workflow #{osw_path} failed with error #{e}"
-            run_result = :errored
-          ensure
+            @sim_logger.error "Error killing process #{pid}: #{e}"
+          end
+
+          run_result = :errored
+        rescue ScriptError => e # This allows us to handle LoadErrors and SyntaxErrors in measures
+          log_message = "The workflow failed with script error #{e.message} in #{e.backtrace.join("\n")}"
+          @sim_logger&.error log_message
+          run_result = :errored
+        rescue Exception => e
+          @sim_logger.error "Workflow #{osw_path} failed with error #{e}"
+          run_result = :errored
+        ensure
+          if @data_point.analysis.urbanopt
             if (!uo_simulation_log.nil? && File.exist?(uo_simulation_log))
               @sim_logger.info "UrbanOpt simulation output: #{File.read(uo_simulation_log)}"
             else
@@ -239,25 +241,25 @@ module DjJobs
             else
               @sim_logger.warn "UrbanOpt process output: #{uo_process_log} does not exist"
             end
+          else # OSCLI workflow 
             if (!process_log.nil? && File.exist?(process_log))
-              @sim_logger.info "Oscli output: #{File.read(process_log)}"
+              @sim_logger.info "OSCLI output: #{File.read(process_log)}"
             else
               @sim_logger.warn "OSCLI output: #{process_log} does not exist"
             end
-            #docker_log = File.join(APP_CONFIG['rails_log_path'], 'docker.log')
-            #if File.exist? docker_log
-            #   @sim_logger.info "docker.log output: #{File.read(docker_log)}"
-            #end
-            #resque_log = File.join(APP_CONFIG['rails_log_path'], 'resque.log')
-            #if File.exist? resque_log
-            #   @sim_logger.info "resque.log output: #{File.read(resque_log)}"
-            #end
           end
-        end
+        end # End block to the OSCLI or URBANopt
+
         if run_result == :errored
           @data_point.set_error_flag
-          @data_point.sdp_log_file = File.read(run_log_file).lines if File.exist? run_log_file
-
+          #set sdp_log_file to run/run.log if it exists, else try and set to oscli_simulation.log
+          if File.exist?(run_log_file)
+            @sim_logger.info "Setting sdp_log_file to #{run_log_file} which exists? #{File.exist?(run_log_file)}"
+            @data_point.sdp_log_file = File.read(run_log_file).lines if File.exist? run_log_file
+          elsif File.exist?(process_log)
+            @sim_logger.info "Setting sdp_log_file to #{process_log} which exists? #{File.exist?(process_log)}"
+            @data_point.sdp_log_file = File.read(process_log).lines if File.exist? process_log
+          end
           report_file = "#{simulation_dir}/out.osw"
           @sim_logger.info "Uploading #{report_file} which exists? #{File.exist?(report_file)}"
           upload_file(report_file, 'Report', nil, 'application/json') if File.exist?(report_file)
@@ -266,7 +268,7 @@ module DjJobs
           @sim_logger.info "Uploading #{report_file} which exists? #{File.exist?(report_file)}"
           upload_file(report_file, 'Data Point', 'Zip File') if File.exist?(report_file)
         else
-          # Save the log to the data point. This does not update while running, rather
+          # Save the /run/run.log to the sdp_log_file. This does not update while running, rather
           # it is saved at the very end of the simulation.
           if File.exist? run_log_file
             @data_point.sdp_log_file = File.read(run_log_file).lines
@@ -386,7 +388,7 @@ module DjJobs
 
       # Check if the receipt file exists, if so, then just return out of this method immediately
       if File.exist? receipt_file
-        @sim_logger.info 'receipt_file already exists, moving on'
+        @sim_logger.info 'receipt_file already exists, moving on; Finished worker initialization'
         return true
       end
       # add check for a valid timeout value
@@ -428,7 +430,7 @@ module DjJobs
               zip_download_count += 1
               File.open(download_file, 'wb') do |saved_file|
                 # the following "open" is provided by open-uri
-                open(download_url, 'rb') do |read_file|
+                URI.open(download_url, 'rb') do |read_file|
                   saved_file.write(read_file.read)
                 end
               end
@@ -621,7 +623,7 @@ module DjJobs
       rescue StandardError => e
         sleep Random.new.rand(1.0..10.0)
         retry if upload_file_attempt < upload_file_max_attempt
-        @sim_logger.error "Could not save report #{display_name} with message: #{e.message} in #{e.backtrace.join("\n")}"
+        @sim_logger&.error "Could not save report #{display_name} with message: #{e.message} in #{e.backtrace.join("\n")}"
         return false
       end
     end
@@ -646,7 +648,7 @@ module DjJobs
       end
     rescue StandardError => e
       msg = "Error #{e.message} running #{script_name}: #{e.backtrace.join("\n")}"
-      @sim_logger.error msg
+      @sim_logger&.error msg
       raise msg
     ensure
       # save the log information to the datapoint if it exists
@@ -675,7 +677,7 @@ module DjJobs
 
     rescue StandardError => e
       msg = "Error #{e.message} running #{cmd}: #{e.backtrace.join("\n")}"
-      @sim_logger.error msg
+      @sim_logger&.error msg
       raise msg
     end
   end

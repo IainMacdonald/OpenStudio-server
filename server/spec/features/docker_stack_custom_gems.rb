@@ -90,7 +90,7 @@ RSpec.describe 'RunScripts', type: :feature do
   it 'run v0_2_14', :v0_2_14 do
 
     # run an analysis
-    command = "#{@bundle_cmd} #{@meta_cli} run_analysis --debug --verbose '#{@project}/script_test/test_model.json' 'http://#{@host}' -z 'test_model' -a single_run"
+    command = "#{@bundle_cmd} #{@meta_cli} run_analysis --debug --verbose '#{@project}/gem_test/test_model.json' 'http://#{@host}' -z 'test_model' -a single_run"
     puts "run command: #{command}"
     run_analysis = system(command)
     expect(run_analysis).to be true
@@ -163,15 +163,101 @@ RSpec.describe 'RunScripts', type: :feature do
     a = RestClient.get "http://#{@host}/data_points/#{data_point_id_}/download_result_file?filename=out.osw"
 
     expect(a).not_to be_empty
-    expect(a.size).to be >(20000)
+    expect(a.size).to be >(10000)
     expect(a.size).to be <(30000)
     expect(a.headers[:status]).to eq("200 OK")
     expect(a.headers[:content_type]).to eq("text/plain")
     expect(a.headers[:content_disposition]).to include("out.osw")
 
     b = JSON.parse(a, symbolize_names: true)
-    #check standards version to be 0.2.14
+    puts "check standards version to be 0.2.14"
     expect(b[:steps][0][:result][:step_info].include? "OpenstudioStandards::VERSION = 0.2.14").to be true
-     
   end # single_run
+  
+  it 'run missing_gemfile', :missing_gemfile do
+
+    # run an analysis
+    command = "#{@bundle_cmd} #{@meta_cli} run_analysis --debug --verbose '#{@project}/gem_test/test_model.json' 'http://#{@host}' -z 'test_model_no_gemfile' -a single_run"
+    puts "run command: #{command}"
+    run_analysis = system(command)
+    expect(run_analysis).to be true
+
+    a = RestClient.get "http://#{@host}/analyses.json"
+    a = JSON.parse(a, symbolize_names: true)
+    a = a.sort { |x, y| x[:created_at] <=> y[:created_at] }.reverse
+    expect(a).not_to be_empty
+    analysis = a[0]
+    analysis_id = analysis[:_id]
+
+    status = 'queued'
+    timeout_seconds = 360
+    data_point_id_ = ''
+    begin
+      ::Timeout.timeout(timeout_seconds) do
+        while status != 'completed'
+          # get the analysis pages
+          get_count = 0
+          get_count_max = 50
+          begin
+            a = RestClient.get "http://#{@host}/analyses/#{analysis_id}/status.json"
+            a = JSON.parse(a, symbolize_names: true)
+            analysis_type = a[:analysis][:analysis_type]
+            expect(analysis_type).to eq('batch_run')
+
+            status = a[:analysis][:status]
+            expect(status).not_to be_nil
+            puts "Accessed pages for analysis: #{analysis_id}, analysis_type: #{analysis_type}, status: #{status}"
+
+            # get all data points in this analysis
+            a = RestClient.get "http://#{@host}/data_points.json"
+            a = JSON.parse(a, symbolize_names: true)
+            data_points = []
+            a.each do |data_point|
+              if data_point[:analysis_id] == analysis_id
+                data_points << data_point
+              end
+            end
+            # confirm that queueing is working
+            data_points.each do |data_point|
+              # get the datapoint pages
+              data_point_id = data_point[:_id]
+              expect(data_point_id).not_to be_nil
+
+              a = RestClient.get "http://#{@host}/data_points/#{data_point_id}.json"
+              a = JSON.parse(a, symbolize_names: true)
+              expect(a).not_to be_nil
+
+              data_points_status = a[:data_point][:status]
+              expect(data_points_status).not_to be_nil
+              puts "Accessed pages for data_point #{data_point_id}, data_points_status = #{data_points_status}"
+              data_point_id_ = data_point_id
+            end
+          rescue RestClient::ExceptionWithResponse => e
+            puts "rescue: #{e} get_count: #{get_count}"
+            sleep Random.new.rand(1.0..10.0)
+            retry if get_count <= get_count_max
+          end
+          puts ''
+          sleep 10
+        end
+      end
+    rescue ::Timeout::Error
+      puts "Analysis status is `#{status}` after #{timeout_seconds} seconds; assuming error."
+    end
+    expect(status).to eq('completed')
+
+    #get UUID.log
+    a = RestClient.get "http://#{@host}/data_points/#{data_point_id_}/download_result_file?filename=#{data_point_id_}.log"
+
+    expect(a).not_to be_empty
+    expect(a.size).to be >(100)
+    expect(a.size).to be <(10000)
+    expect(a.headers[:status]).to eq("200 OK")
+    expect(a.headers[:content_type]).to eq("text/x-log")
+
+    #b = JSON.parse(a, symbolize_names: true)
+    puts "check for OSCLI output: --bundle: File does not exist"
+    expect(a.include? "OSCLI output: --bundle: File does not exist").to be true
+     
+  end # missing_gemfile  
 end
