@@ -252,8 +252,14 @@ module DjJobs
 
         if run_result == :errored
           @data_point.set_error_flag
-          @data_point.sdp_log_file = File.read(run_log_file).lines if File.exist? run_log_file
-
+          #set sdp_log_file to run/run.log if it exists, else try and set to oscli_simulation.log
+          if File.exist?(run_log_file)
+            @sim_logger.info "Setting sdp_log_file to #{run_log_file} which exists? #{File.exist?(run_log_file)}"
+            @data_point.sdp_log_file = File.read(run_log_file).lines if File.exist? run_log_file
+          elsif File.exist?(process_log)
+            @sim_logger.info "Setting sdp_log_file to #{process_log} which exists? #{File.exist?(process_log)}"
+            @data_point.sdp_log_file = File.read(process_log).lines if File.exist? process_log
+          end
           report_file = "#{simulation_dir}/out.osw"
           @sim_logger.info "Uploading #{report_file} which exists? #{File.exist?(report_file)}"
           upload_file(report_file, 'Report', nil, 'application/json') if File.exist?(report_file)
@@ -262,7 +268,7 @@ module DjJobs
           @sim_logger.info "Uploading #{report_file} which exists? #{File.exist?(report_file)}"
           upload_file(report_file, 'Data Point', 'Zip File') if File.exist?(report_file)
         else
-          # Save the log to the data point. This does not update while running, rather
+          # Save the /run/run.log to the sdp_log_file. This does not update while running, rather
           # it is saved at the very end of the simulation.
           if File.exist? run_log_file
             @data_point.sdp_log_file = File.read(run_log_file).lines
