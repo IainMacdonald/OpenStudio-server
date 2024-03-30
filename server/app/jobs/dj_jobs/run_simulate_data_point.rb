@@ -662,7 +662,7 @@ module DjJobs
       if File.file? "#{analysis_dir}/Gemfile"
         @sim_logger.info "Gemfile found in: #{analysis_dir}"
       else
-        @sim_logger.info "Gemfile not found at #{analysis_dir}" 
+        @sim_logger.error "GEMFILE NOT FOUND at #{analysis_dir}" 
         return false
       end
 
@@ -672,8 +672,9 @@ module DjJobs
       @sim_logger.info "Bundle install command: #{cmd}"
       pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [log_path, 'w'])
       Process.wait pid
-      @sim_logger.info "gem installation complete" 
-      @sim_logger.info File.read(log_path).lines
+      @sim_logger.info "gem installation complete"
+      @sim_logger.info "bundle.log output: #{File.read(log_path).lines}"      
+      #@sim_logger.info File.read(log_path).lines
 
     rescue StandardError => e
       msg = "Error #{e.message} running #{cmd}: #{e.backtrace.join("\n")}"
