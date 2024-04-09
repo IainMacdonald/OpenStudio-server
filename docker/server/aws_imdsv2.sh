@@ -1,4 +1,14 @@
 #!/bin/bash
+# *******************************************************************************
+# OpenStudio(R), Copyright (c) Alliance for Sustainable Energy, LLC.
+# See also https://openstudio.net/license
+# *******************************************************************************
+
+# this script polls the AWS metadata IMDSv2 to get the spot instance-action for termination.
+# it automatically gets a token and checks for the metadata (v2 method) which is more secure.
+# it still responds to v1 signals.  To test locally, change the METADATA_URL if needed.
+# the script will also respond to a file put at /opt/openstudio/server/bin/kill.worker
+   
 # Metadata service URL variable
 #METADATA_URL="localhost:1338"
 METADATA_URL="169.254.169.254"
