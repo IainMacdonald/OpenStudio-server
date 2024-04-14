@@ -255,5 +255,162 @@ RSpec.describe 'RunRequeue', type: :feature, algo: true do
     expect(a.body).to include "Created indexes"
     
   end # lhs
+  
+  it 'run 3x lhs analysis', :lhs, js: true do
+
+
+    puts 'remove any existing projects'
+    a = RestClient.get "http://#{@host}/projects.json"
+    a = JSON.parse(a, symbolize_names: true)
+    a.each do |project|
+        sleep(1)
+        id = project[:_id]
+        puts "removing existing project id: #{id}"
+        begin
+            RestClient.delete "http://#{@host}/projects/#{id}"
+        rescue RestClient::ExceptionWithResponse => err
+            case err.http_code
+            when 301, 302, 307
+                puts '   redirecting after delete'
+            end
+        end
+    end
+    
+    # setup expected results
+    lhs = [{electricity_consumption_cvrmse: 45.748727859310684,
+            electricity_consumption_nmbe: -47.15331592,
+            natural_gas_consumption_cvrmse: 93.87522319797985,
+            natural_gas_consumption_nmbe: -76.99356458
+           },
+           {
+            electricity_consumption_cvrmse: 36.992082716685594,
+            electricity_consumption_nmbe: 36.75558058301333,
+            natural_gas_consumption_cvrmse: 26.054394017956753,
+            natural_gas_consumption_nmbe: -1.974857387
+           },
+           {
+            electricity_consumption_cvrmse: 88.15691010253096,
+            electricity_consumption_nmbe: -90.09381264,
+            natural_gas_consumption_cvrmse: 59.5879904,
+            natural_gas_consumption_nmbe: 37.55474192165185
+           }]
+    
+    # setup bad results
+    lhs_bad = [
+      { electricity_consumption_cvrmse: 0,
+        electricity_consumption_nmbe: 0,
+        natural_gas_consumption_cvrmse: 0,
+        natural_gas_consumption_nmbe: 0 }
+    ]
+    statuses = ['tmp', 'tmp','tmp']
+    analyses_ids = []
+    for i in 0..2 do
+      # run an analysis
+      command = "#{@bundle_cmd} #{@meta_cli} run_analysis --debug --verbose '#{@project}/SEB_sleep_odd.json' 'http://#{@host}' -z 'SEB_calibration_NSGA_2013' -a lhs"
+      puts "run command: #{command}"
+      run_analysis = system(command)
+      expect(run_analysis).to be true
+
+      a = RestClient.get "http://#{@host}/analyses.json"
+      a = JSON.parse(a, symbolize_names: true)
+      a = a.sort { |x, y| x[:created_at] <=> y[:created_at] }.reverse
+      expect(a).not_to be_empty
+      analysis = a[0]
+      analysis_id = analysis[:_id]
+      analyses_ids << analysis_id
+      puts "analyses_ids: #{analyses_ids}, analysis_id: #{analysis_id}"
+    end
+    status = 'queued'
+    timeout_seconds = 360
+    sleep 10
+    begin
+      ::Timeout.timeout(timeout_seconds) do
+        # get the analysis pages
+        get_count = 0
+        get_count_max = 50
+        
+        until statuses.all? { |status| status == 'completed' }
+          begin
+            for i in 0..2 do
+                a = RestClient.get "http://#{@host}/analyses/#{analyses_ids[i]}/status.json"
+                a = JSON.parse(a, symbolize_names: true)
+                analysis_type = a[:analysis][:analysis_type]
+                expect(analysis_type).to eq('batch_run')
+
+                # analysis_type = a[:analysis][:jobs][0][:analysis_type]
+                # expect(analysis_type).to eq('lhs')
+
+                statuses[i] = a[:analysis][:status]
+                expect(status).not_to be_nil
+                puts "Accessed pages for analysis: #{analyses_ids[i]}, analysis_type: #{analysis_type}, status: #{statuses[i]}"
+                
+             end
+          rescue RestClient::ExceptionWithResponse => e
+            puts "rescue: #{e} get_count: #{get_count}"
+            sleep Random.new.rand(1.0..10.0)
+            get_count += 1 # Increment the retry counter
+            retry if get_count <= get_count_max
+          end
+          puts ''
+          sleep 10
+        end
+      end
+    rescue ::Timeout::Error
+      puts "Analysis status is `#{statuses}` after #{timeout_seconds} seconds; assuming error."
+    end
+    expect(statuses.all? { |status| status == 'completed' }).to be true
+
+    get_count = 0
+    get_count_max = 50
+    begin
+      # confirm that datapoints ran successfully
+      dps = RestClient.get "http://#{@host}/data_points.json"
+      dps = JSON.parse(dps, symbolize_names: true)
+      expect(dps).not_to be_nil
+
+      data_points = []
+      dps.each do |data_point|
+        if analyses_ids.include?(data_point[:analysis_id])
+          data_points << data_point
+        end
+      end
+      expect(data_points.size).to eq(9)
+
+      data_points.each do |data_point|
+        dp = RestClient.get "http://#{@host}/data_points/#{data_point[:_id]}.json"
+        dp = JSON.parse(dp, symbolize_names: true)
+        expect(dp[:data_point][:status_message]).to eq('completed normal')
+
+        results = dp[:data_point][:results][:calibration_reports_enhanced_20]
+        expect(results).not_to be_nil
+        sim = results.slice(:electricity_consumption_cvrmse, :electricity_consumption_nmbe, :natural_gas_consumption_cvrmse, :natural_gas_consumption_nmbe)
+        expect(sim.size).to eq(4)
+        sim = sim.transform_values { |x| x.truncate(4) }
+        puts "lhs sim: #{sim}"
+        tmp = []
+        lhs.each do |x|
+          tmp << x.transform_values { |y| y.truncate(4) }
+        end
+        compare = tmp.include?(sim)
+        expect(compare).to be true
+        puts "data_point[:#{data_point[:_id]}] compare is: #{compare}"
+
+        compare = lhs_bad.include?(sim)
+        expect(compare).to be false
+      end
+    rescue RestClient::ExceptionWithResponse => e
+      puts "rescue: #{e} get_count: #{get_count}"
+      sleep Random.new.rand(1.0..10.0)
+      retry if get_count <= get_count_max
+    end
+    
+    puts 'check logs for mongo index errors'
+    a = RestClient.get "http://#{@host}/analyses/#{analysis_id}/debug_log"
+    expect(a.headers[:status]).to eq("200 OK")
+    expect(a.body).not_to include "OperationFailure"
+    expect(a.body).not_to include "FATAL"
+    expect(a.body).to include "Created indexes"
+    
+  end # 3x lhs
 
 end
