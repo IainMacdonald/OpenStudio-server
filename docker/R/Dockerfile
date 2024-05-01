@@ -2,7 +2,7 @@
 # DESCRIPTION:      OpenStudio Server R Container
 # TO_BUILD_AND_RUN: docker-compose up
 
-FROM nrel/openstudio-r:4.2.0
+FROM nrel/openstudio-r:4.4.0
 MAINTAINER Nicholas Long nicholas.long@nrel.gov
 
 # Add in the additional R packages
@@ -17,7 +17,7 @@ RUN R CMD INSTALL /opt/openstudio/R/lib/R-packages/NRELmoo*.tar.gz /opt/openstud
 ADD /lib /opt/openstudio/R/lib
 
 # Install Gems
-RUN gem install bundler -v2.1.4
+RUN gem install bundler -v2.4.10
 RUN cd /opt/openstudio/R/lib && bundle install --jobs=3 --retry=3
 
 ADD /start.R /start.R

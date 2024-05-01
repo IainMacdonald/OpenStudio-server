@@ -2,11 +2,15 @@
 # OpenStudio(R), Copyright (c) Alliance for Sustainable Energy, LLC.
 # See also https://openstudio.net/license
 # *******************************************************************************
-
+require 'psych'
 # Load in the APP_CONFIG
 # Read in default config settings unique to this application.
 path = File.join(Rails.root, '/config/config.yml')
-APP_CONFIG = YAML.load(ERB.new(File.new(path).read).result)[Rails.env]
+config_content = ERB.new(File.new(path).read).result
+
+# Parsing YAML content with alias support
+APP_CONFIG = Psych.safe_load(config_content, aliases: true)[Rails.env]
+#APP_CONFIG = YAML.load(ERB.new(File.new(path).read).result)[Rails.env]
 
 # Go through and interpret some of the variables
 APP_CONFIG['r_scripts_path'] = File.expand_path(APP_CONFIG['r_scripts_path'].gsub(':rails_root', Rails.root.to_s))
