@@ -2,7 +2,7 @@
 
 echo "The build architecture is ${ImageOS}"
 
-if [ "${ImageOS}" == "ubuntu20" ] && [ "${BUILD_TYPE}" == "docker" ]; then
+if [ "${ImageOS}" == "ubuntu22" ] && [ "${BUILD_TYPE}" == "docker" ]; then
     echo "Installing docker compose"
     sudo rm /usr/local/bin/docker-compose
     curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
@@ -21,11 +21,11 @@ else
 
         # install portable ruby - required for build that will eventually be published
         # see https://github.com/NREL/OpenStudio-PAT/wiki/Pat-Build-Notes
-        curl -SLO --insecure https://openstudio-resources.s3.amazonaws.com/pat-dependencies3/ruby-2.7.2-darwin.tar.gz
-        tar xzf ruby-2.7.2-darwin.tar.gz
+        curl -SLO --insecure https://openstudio-resources.s3.amazonaws.com/pat-dependencies3/ruby-3.2.2-darwin.tar.gz
+        tar xzf ruby-3.2.2-darwin.tar.gz
         sudo mv ruby /usr/local/
         otool -L /usr/local/ruby/bin/ruby
-        rm ruby-2.7.2-darwin.tar.gz
+        rm ruby-3.2.2-darwin.tar.gz
 
         # Install mongodb from a download. Brew is hanging and requires building mongo. This also speeds up the builds.
         curl -SLO https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-6.0.7.tgz
@@ -37,7 +37,7 @@ else
         export OS_NAME=OpenStudio-${OPENSTUDIO_VERSION}${OPENSTUDIO_VERSION_EXT}%2B${OPENSTUDIO_VERSION_SHA}-Darwin-x86_64
         export OS_NAME_WITH_PLUS=OpenStudio-${OPENSTUDIO_VERSION}${OPENSTUDIO_VERSION_EXT}+${OPENSTUDIO_VERSION_SHA}-Darwin-x86_64
         #curl -SL --insecure https://openstudio-ci-builds.s3-us-west-2.amazonaws.com/develop/${OS_NAME}.tar.gz -o $OS_NAME_WITH_PLUS.tar.gz
-        curl -SL --insecure https://github.com/NREL/OpenStudio/releases/download/v3.7.0/${OS_NAME}.tar.gz -o $OS_NAME_WITH_PLUS.tar.gz
+        curl -SL --insecure https://github.com/NREL/OpenStudio/releases/download/v3.8.0/${OS_NAME}.tar.gz -o $OS_NAME_WITH_PLUS.tar.gz
         # OSX downloads with %2B but installs with + sign. These are the encoded chars in url strings.
         #hdiutil attach ${OS_NAME}.dmg
         #sed -i -e "s|REPLACEME|$HOME/openstudio|" ci/github-actions/install-mac.qs
@@ -59,7 +59,7 @@ else
         ulimit -n 4096
         ulimit -a
 
-    elif [ "${ImageOS}" == "ubuntu20" ]; then
+    elif [ "${ImageOS}" == "ubuntu22" ]; then
         echo "Setting up Ubuntu for unit tests and Rubocop"
         # install pipe viewer to throttle printing logs to screen (not a big deal in linux, but it is in osx)
         sudo apt-get update && sudo apt-get install -y wget gnupg software-properties-common build-essential
@@ -84,13 +84,13 @@ else
 
         # install portable ruby - required for build that will eventually be published
         # see https://github.com/NREL/OpenStudio-PAT/wiki/Pat-Build-Notes
-        curl -SLO --insecure https://openstudio-resources.s3.amazonaws.com/pat-dependencies3/ruby-2.7.2-linux.tar.gz
-        tar xvzf ruby-2.7.2-linux.tar.gz
+        curl -SLO --insecure https://openstudio-resources.s3.amazonaws.com/pat-dependencies3/ruby-3.2.2-linux.tar.gz
+        tar xvzf ruby-3.2.2-linux.tar.gz
         ls -l /usr/local/
         sudo rm -rf /usr/local/ruby
         sudo mv ruby /usr/local/
         ldd /usr/local/ruby/bin/ruby
-        rm ruby-2.7.2-linux.tar.gz
+        rm ruby-3.2.2-linux.tar.gz
 
         mkdir -p reports/rspec
         sudo ./ci/github-actions/install_openstudio.sh $OPENSTUDIO_VERSION $OPENSTUDIO_VERSION_SHA $OPENSTUDIO_VERSION_EXT
