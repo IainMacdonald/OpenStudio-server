@@ -657,6 +657,33 @@ module DjJobs
       end
     end
 
+    def create_config_file
+      # make backup of existing /opt/openstudio/server/.bundle/config
+      FileUtils.mv('/opt/openstudio/server/.bundle', '/opt/openstudio/server/bundle_orig')
+      FileUtils.mv('/opt/openstudio/server/Gemfile', '/opt/openstudio/server/bundle_orig/Gemfile')
+      FileUtils.mv('/opt/openstudio/server/Gemfile.lock', '/opt/openstudio/server/bundle_orig/Gemfile.lock')
+      # remake .bundle config but pointing to analysis dir      
+      config_dir = "/opt/openstudio/server/.bundle"
+      # Create directory if it doesn't exist
+      Dir.mkdir(config_dir)
+      config = { "BUNDLE_PATH" => "#{analysis_dir}/gems",
+                 "BUNDLE_GEMFILE" => "#{analysis_dir}/Gemfile"
+      }
+      # Write the configuration file
+      File.open("#{config_dir}/config", 'w') { |file| file.write(config.to_yaml) }
+    end
+
+    def replace_config_file
+      # return the bundle config to orig state
+      config_dir = "/opt/openstudio/server/.bundle"
+      # Create directory if it doesn't exist
+      FileUtils.rm_rf(config_dir)
+      # MV files back to orig location
+      FileUtils.mv('/opt/openstudio/server/bundle_orig/Gemfile','/opt/openstudio/server/Gemfile')
+      FileUtils.mv('/opt/openstudio/server/bundle_orig/Gemfile.lock','/opt/openstudio/server/Gemfile.lock')
+      FileUtils.mv('/opt/openstudio/server/bundle_orig', config_dir)     
+    end    
+
     def run_bundle_gems
       @sim_logger.info "Installing gems" 
       if File.file? "#{analysis_dir}/Gemfile"
@@ -667,14 +694,21 @@ module DjJobs
       end
 
       log_path = "#{analysis_dir}/bundle.log"
-      cmd = "bundle install --gemfile=#{analysis_dir}/Gemfile --path=#{analysis_dir}/gems"
+      # set ENVs to nil
       oscli_env_unset = Hash[Utility::Oss::ENV_VARS_TO_UNSET_FOR_OSCLI.collect{|x| [x,nil]}]
+      @sim_logger.info "Bundle config setup"
+      create_config_file
+      @sim_logger.info "Bundle config command complete"
+      @sim_logger.info "oscli_env_unset: #{oscli_env_unset}"      
+      cmd = "pwd && printenv && GEM_HOME=#{analysis_dir}/gems bundle install"
       @sim_logger.info "Bundle install command: #{cmd}"
       pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [log_path, 'w'])
       Process.wait pid
       @sim_logger.info "gem installation complete"
-      @sim_logger.info "bundle.log output: #{File.read(log_path).lines}"      
-      #@sim_logger.info File.read(log_path).lines
+      @sim_logger.info "bundle.log output: #{File.read(log_path).lines}"
+      @sim_logger.info "replace Bundle config w orig"      
+      replace_config_file
+      @sim_logger.info "replace Bundle config w orig complete" 
 
     rescue StandardError => e
       msg = "Error #{e.message} running #{cmd}: #{e.backtrace.join("\n")}"
