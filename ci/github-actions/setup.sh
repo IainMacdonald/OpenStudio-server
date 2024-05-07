@@ -80,7 +80,7 @@ else
         #sudo mv redis.conf /etc/redis/redis.conf
         sudo systemctl start redis-server.service || true
         sudo systemctl status redis-server.service
-        sudo systemctl start mongodb
+        sudo systemctl start mongod
 
         # install portable ruby - required for build that will eventually be published
         # see https://github.com/NREL/OpenStudio-PAT/wiki/Pat-Build-Notes
