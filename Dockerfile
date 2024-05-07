@@ -11,12 +11,12 @@ MAINTAINER Nicholas Long nicholas.long@nrel.gov
 ENV DEBIAN_FRONTEND=noninteractive
 # Install required libaries.
 #   realpath - needed for wait-for-it
-RUN apt-get update && apt-get install -y wget gnupg \
-    && wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add - \
-    && echo "deb http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | \
-    tee /etc/apt/sources.list.d/mongodb-org-6.0.list \
+RUN apt-get update && apt-get install -y wget gnupg lsb-release \
+    && wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | gpg --dearmor | tee /usr/share/keyrings/mongodb-org-6.0-archive-keyring.gpg \
+    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-org-6.0-archive-keyring.gpg] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+        mongodb-org \
         apt-transport-https \
         autoconf \
         bison \
