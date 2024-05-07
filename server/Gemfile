@@ -24,7 +24,7 @@ gem 'mongoid', '7.5.4'
 gem 'mongoid-paperclip'
 
 # R
-gem 'rserve-client', :github => 'robbevp/Rserve-Ruby-client', :branch => 'remove-fixnum-usage'
+gem 'rserve-client', :github => 'brianlball/Rserve-Ruby-client', :branch => 'remove-fixnum-usage'
 gem 'rserve-simpler', '~> 0.0.6'
 gem 'matrix'
 
