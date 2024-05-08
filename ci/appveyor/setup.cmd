@@ -1,11 +1,9 @@
 @echo off
-REM Set initial PATH with Git and Ruby binaries
-set PATH=C:\Ruby32-x64\bin;C:\Program Files\Git\mingw64\bin;C:\projects\openstudio\bin;%PATH%
+REM Set initial PATH with Git, Ruby binaries, and DevKit
+set PATH=C:\Ruby32-x64\bin;C:\DevKit\bin;C:\Program Files\Git\mingw64\bin;C:\projects\openstudio\bin;%PATH%
 
-REM Set Bundler version
+REM Set Bundler version and configure GEM paths
 set BUNDLE_VERSION=2.4.10
-
-REM Configure GEM paths
 set GEM_HOME=C:\projects\openstudio-server\gems
 set GEM_PATH=C:\projects\openstudio-server\gems;C:\projects\openstudio-server\gems\bundler\gems
 
@@ -25,7 +23,7 @@ dir C:\projects\openstudio
 REM Cleanup installer
 del %OS_INSTALL_NAME%
 
-REM Show Ruby version
+REM Show Ruby version and OpenStudio version
 ruby -v
 openstudio openstudio_version
 
@@ -59,12 +57,16 @@ REM Install gems as specified
 echo Installing required Ruby gems...
 call bundle install --verbose
 if %ERRORLEVEL% neq 0 (
-    echo Gem installation failed.
-    exit /b %ERRORLEVEL%
+    echo Attempting to manually install problematic gems...
+    gem install <problematic-gem-name> -- --use-system-libraries
+    if %ERRORLEVEL% neq 0 (
+        echo Manual gem installation also failed.
+        exit /b %ERRORLEVEL%
+    )
 )
 
 REM Navigate to the server directory and run the gem installation script
-cd c:\projects\openstudio-server
+cd C:\projects\openstudio-server
 call ruby C:\projects\openstudio-server\bin\openstudio_meta install_gems --with_test_develop --debug --verbose
 if %ERRORLEVEL% neq 0 (
     echo Gem installation script failed.
