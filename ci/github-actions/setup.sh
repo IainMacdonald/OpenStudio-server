@@ -63,23 +63,28 @@ else
         echo "Setting up Ubuntu for unit tests and Rubocop"
         # install pipe viewer to throttle printing logs to screen (not a big deal in linux, but it is in osx)
         sudo apt-get update && sudo apt-get install -y wget gnupg software-properties-common build-essential
-        sudo wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
-        echo "deb http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse | tee /etc/apt/sources.list.d/mongodb-org-6.0.list"
+        #sudo wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+        #echo "deb http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse | tee /etc/apt/sources.list.d/mongodb-org-6.0.list"
+        # Import MongoDB public GPG key
+        sudo wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | gpg --dearmor | sudo tee /usr/share/keyrings/mongodb-org-6.0-archive-keyring.gpg
+        # Add MongoDB to the sources list
+        echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-org-6.0-archive-keyring.gpg] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+
         sudo apt-get update
-        sudo apt-get install -y pv tree mongodb libqdbm14 libxml2-dev
+        sudo apt-get install -y pv tree mongodb-org libqdbm14 libxml2-dev
         # explicitly install. the latest version of redis-server
-        wget https://download.redis.io/releases/redis-6.0.9.tar.gz
-        tar xzf redis-6.0.9.tar.gz && cd redis-6.0.9
-        make && sudo make install
-        sudo cp utils/systemd-redis_server.service /etc/systemd/system/redis.service
+        #wget https://download.redis.io/releases/redis-6.0.9.tar.gz
+        #tar xzf redis-6.0.9.tar.gz && cd redis-6.0.9
+        #make && sudo make install
+        #sudo cp utils/systemd-redis_server.service /etc/systemd/system/redis.service
         cd $GITHUB_WORKSPACE
-        rm redis-6.0.9.tar.gz
+        #rm redis-6.0.9.tar.gz
         #sudo apt-get install redis-server || true
         #sudo systemctl stop redis-server.service
         #sudo sed -e 's/^bind.*/bind 127.0.0.1/' /etc/redis/redis.conf > redis.conf
         #sudo mv redis.conf /etc/redis/redis.conf
-        sudo systemctl start redis-server.service || true
-        sudo systemctl status redis-server.service
+        #sudo systemctl start redis-server.service || true
+        #sudo systemctl status redis-server.service
         sudo systemctl start mongod
 
         # install portable ruby - required for build that will eventually be published
