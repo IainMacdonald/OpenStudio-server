@@ -23,6 +23,11 @@ else
         # see https://github.com/NREL/OpenStudio-PAT/wiki/Pat-Build-Notes
         curl -SLO --insecure https://openstudio-resources.s3.amazonaws.com/pat-dependencies3/ruby-3.2.2-darwin.tar.gz
         tar xzf ruby-3.2.2-darwin.tar.gz
+        exit_status_tar=$?
+        if [ $exit_status_tar -ne 0 ]; then
+         echo "Error: Failed to extract Ruby 3.2.2 archive"
+         exit $exit_status_tar
+        fi
         sudo mv ruby /usr/local/
         otool -L /usr/local/ruby/bin/ruby
         rm ruby-3.2.2-darwin.tar.gz
@@ -30,6 +35,11 @@ else
         # Install mongodb from a download. Brew is hanging and requires building mongo. This also speeds up the builds.
         curl -SLO https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-6.0.7.tgz
         tar xvzf mongodb-macos-x86_64-6.0.7.tgz
+        exit_status_tar=$?
+        if [ $exit_status_tar -ne 0 ]; then
+         echo "Error: Failed to extract Mongo 6.0.7 archive"
+         exit $exit_status_tar
+        fi
         sudo cp mongodb-macos-x86_64-6.0.7/bin/* /usr/local/bin/
         rm -r mongodb-macos*
 
@@ -47,6 +57,11 @@ else
         #hdiutil detach /Volumes/${OS_NAME_WITH_PLUS} -force
         ls -l
         tar xvzf $OS_NAME_WITH_PLUS.tar.gz -C $HOME
+        exit_status_tar=$?
+        if [ $exit_status_tar -ne 0 ]; then
+         echo "Error: Failed to extract OpenStudio archive"
+         exit $exit_status_tar
+        fi
         ls -l $HOME
         rm -rf $OS_NAME_WITH_PLUS.tar.gz
         export PATH="/usr/local/ruby/bin:$GITHUB_WORKSPACE/gems/bin:$HOME/$OS_NAME_WITH_PLUS/bin:$PATH"
@@ -92,6 +107,11 @@ else
         # see https://github.com/NREL/OpenStudio-PAT/wiki/Pat-Build-Notes
         curl -SLO --insecure https://openstudio-resources.s3.amazonaws.com/pat-dependencies3/ruby-3.2.2-linux.tar.gz
         tar xvzf ruby-3.2.2-linux.tar.gz
+        exit_status_tar=$?
+        if [ $exit_status_tar -ne 0 ]; then
+         echo "Error: Failed to extract Ruby 3.2.2 archive"
+         exit $exit_status_tar
+        fi
         ls -l /usr/local/
         sudo rm -rf /usr/local/ruby
         sudo mv ruby /usr/local/
