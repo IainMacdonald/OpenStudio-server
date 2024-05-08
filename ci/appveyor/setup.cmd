@@ -6,7 +6,8 @@ set GEM_PATH=C:\projects\openstudio-server\gems;C:\projects\openstudio-server\ge
 
 echo Downloading and Installing OpenStudio (develop branch, %OPENSTUDIO_VERSION%%OPENSTUDIO_VERSION_EXT%+%OPENSTUDIO_VERSION_SHA%)
 REM install develop build
-set OS_INSTALL_NAME=OpenStudio-%OPENSTUDIO_VERSION%%OPENSTUDIO_VERSION_EXT%%%2B%OPENSTUDIO_VERSION_SHA%-Windows.exe
+set OS_INSTALL_NAME=OpenStudio-%OPENSTUDIO_VERSION%%OPENSTUDIO_VERSION_EXT%+%OPENSTUDIO_VERSION_SHA%-Windows.exe
+
 echo Install name is %OS_INSTALL_NAME%
 
 REM curl -SLO --insecure https://openstudio-ci-builds.s3-us-west-2.amazonaws.com/develop/%OS_INSTALL_NAME%
