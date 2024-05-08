@@ -27,6 +27,14 @@ REM Show Ruby version and OpenStudio version
 ruby -v
 openstudio openstudio_version
 
+REM Install essential Ruby gems needed for the environment setup
+echo Installing essential gems...
+call gem install rake
+if %ERRORLEVEL% neq 0 (
+    echo Failed to install rake
+    exit /b %ERRORLEVEL%
+)
+
 REM Setup MSYS2 and MinGW toolchain
 echo Setting up MSYS2 and MinGW toolchain
 call ridk install 2 3
