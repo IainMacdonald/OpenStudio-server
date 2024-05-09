@@ -2,8 +2,7 @@ source 'http://rubygems.org'
 ruby '~>3.2.0'
 
 gem 'colored', '~> 1.2'
-#gem 'git', '~> 1.19.1'
-gem 'git', '~> 2.41.0'
+gem 'git', '~> 1.19.1'
 gem 'rake', '~> 13.0'
 
 group :development, :test do
