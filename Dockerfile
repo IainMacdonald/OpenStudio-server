@@ -42,6 +42,7 @@ RUN apt-get update && apt-get install -y wget gnupg lsb-release \
         libxml2-dev \
         libxslt-dev \
         libffi-dev \
+        libffi7 \
         libssl-dev \
         libyaml-dev \
         libice-dev \
