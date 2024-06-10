@@ -7,20 +7,20 @@ class DataPointsController < ApplicationController
   # GET /data_points
   # GET /data_points.json
   def index
-    Rails.logger.debug "data_points_contoller.index enter"
+    Rails.logger.debug "data_points_controller.index enter"
     @data_points = DataPoint.all
 
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @data_points }
     end
-    Rails.logger.debug "data_points_contoller.index leave"
+    Rails.logger.debug "data_points_controller.index leave"
   end
 
   # GET /data_points/1
   # GET /data_points/1.json
   def show
-    Rails.logger.debug "data_points_contoller.show enter"
+    Rails.logger.debug "data_points_controller.show enter"
     @data_point = DataPoint.find(params[:id])
     respond_to do |format|
       if @data_point
@@ -60,11 +60,11 @@ class DataPointsController < ApplicationController
         format.json { render json: { error: 'No Datapoint' }, status: :unprocessable_entity }
       end
     end
-    Rails.logger.debug "data_points_contoller.show leave"
+    Rails.logger.debug "data_points_controller.show leave"
   end
 
   def status
-    Rails.logger.debug "data_points_contoller.status enter"
+    Rails.logger.debug "data_points_controller.status enter"
     # The name :jobs is legacy based on how PAT queries the datapoints. Should we alias this to status?
     only_fields = [:status, :status_message, :analysis_id]
     dps = params[:status] ? DataPoint.where(status: params[:jobs]).only(only_fields) : DataPoint.all.only(only_fields)
@@ -85,20 +85,20 @@ class DataPointsController < ApplicationController
         }
       end
     end
-    Rails.logger.debug "data_points_contoller.status leave"
+    Rails.logger.debug "data_points_controller.status leave"
   end
 
   # GET /data_points/new
   # GET /data_points/new.json
   def new
-    Rails.logger.debug "data_points_contoller.new enter"
+    Rails.logger.debug "data_points_controller.new enter"
     @data_point = DataPoint.new
 
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @data_point }
     end
-    Rails.logger.debug "data_points_contoller.new leave"
+    Rails.logger.debug "data_points_controller.new leave"
   end
 
   # GET /data_points/1/edit
@@ -109,7 +109,7 @@ class DataPointsController < ApplicationController
   # POST /data_points
   # POST /data_points.json
   def create
-    Rails.logger.debug "data_points_contoller.create enter"
+    Rails.logger.debug "data_points_controller.create enter"
     error_message = nil
 
     dp_params = data_point_params
@@ -188,7 +188,7 @@ class DataPointsController < ApplicationController
         end
       end
     end
-    Rails.logger.debug "data_points_contoller.create leave"
+    Rails.logger.debug "data_points_controller.create leave"
   end
 
   # POST batch_upload.json
@@ -229,7 +229,7 @@ class DataPointsController < ApplicationController
 
   # PUT /data_points/1.json
   def run
-    Rails.logger.debug "data_points_contoller.run enter"
+    Rails.logger.debug "data_points_controller.run enter"
     error = false
     error_message = nil
     @data_point = DataPoint.find(params[:id])
@@ -247,13 +247,13 @@ class DataPointsController < ApplicationController
         format.json { render json: error_message, status: :unprocessable_entity }
       end
     end
-    Rails.logger.debug "data_points_contoller.run leave"
+    Rails.logger.debug "data_points_controller.run leave"
   end
 
   # PUT /data_points/1
   # PUT /data_points/1.json
   def update
-    Rails.logger.debug "data_points_contoller.update enter"
+    Rails.logger.debug "data_points_controller.update enter"
     @data_point = DataPoint.find(params[:id])
 
     respond_to do |format|
@@ -265,7 +265,7 @@ class DataPointsController < ApplicationController
         format.json { render json: @data_point.errors, status: :unprocessable_entity }
       end
     end
-    Rails.logger.debug "data_points_contoller.update leave"
+    Rails.logger.debug "data_points_controller.update leave"
   end
 
   # DELETE /data_points/1
@@ -285,7 +285,7 @@ class DataPointsController < ApplicationController
   # API only method
   # DELETE /data_points/1/result_files
   def result_files
-    Rails.logger.debug "data_points_contoller.results_files enter"
+    Rails.logger.debug "data_points_controller.results_files enter"
     dp = DataPoint.find(params[:id])
     dp.result_files.destroy
     dp.save
@@ -295,15 +295,15 @@ class DataPointsController < ApplicationController
     respond_to do |format|
       format.json { head :no_content }
     end
-    Rails.logger.debug "data_points_contoller.results_files leave"
+    Rails.logger.debug "data_points_controller.results_files leave"
   end
 
   def requeue
-    Rails.logger.warn "data_points_contoller.REQUEUE"
+    Rails.logger.warn "data_points_controller.REQUEUE"
     @data_point = DataPoint.find(params[:id])
     analysis_id = @data_point.analysis
-    Rails.logger.debug "data_points_contoller.id: #{@data_point.id}"
-    Rails.logger.debug "data_points_contoller.job_id: #{@data_point.job_id}"
+    Rails.logger.debug "data_points_controller.id: #{@data_point.id}"
+    Rails.logger.debug "data_points_controller.job_id: #{@data_point.job_id}"
     # Destroy the existing job in Resque queue; this is tied to a worker_host:PID:uuid
     Resque::Job.destroy(:simulations, 'ResqueJobs::RunSimulateDataPoint', @data_point.job_id)
 
@@ -336,7 +336,7 @@ class DataPointsController < ApplicationController
   end
 
   def find_resque_worker_by_job_id(job_id)
-    Rails.logger.debug "data_points_contoller.find_resque_worker_by_job_id"
+    Rails.logger.debug "data_points_controller.find_resque_worker_by_job_id"
     Resque.workers.each do |worker|
       # Get the job information that the worker is currently processing
       worker_job = worker.job
@@ -357,7 +357,7 @@ class DataPointsController < ApplicationController
   # upload results file
   # POST /data_points/1/upload_file.json
   def upload_file
-    Rails.logger.debug "data_points_contoller.upload_file enter"
+    Rails.logger.debug "data_points_controller.upload_file enter"
     # expected params: datapoint_id, file: {display_name, type, data, attachment}
     error = false
     error_messages = []
@@ -390,12 +390,12 @@ class DataPointsController < ApplicationController
         format.json { render 'result_file', status: :created, location: data_point_url(@data_point) }
       end
     end
-    Rails.logger.debug "data_points_contoller.upload_file leave"
+    Rails.logger.debug "data_points_controller.upload_file leave"
   end
 
   # download a datapoint report of filename
   def download_report
-    Rails.logger.debug "data_points_contoller.download_report enter"
+    Rails.logger.debug "data_points_controller.download_report enter"
     @data_point = DataPoint.find(params[:id])
 
     h = nil
@@ -416,12 +416,12 @@ class DataPointsController < ApplicationController
         format.json { render json: { status: 'error', error_message: 'could not find report' }, status: :unprocessable_entity }
       end
     end
-    Rails.logger.debug "data_points_contoller.download_report leave"
+    Rails.logger.debug "data_points_controller.download_report leave"
   end
 
   # GET /data_points/1/download_result_file
   def download_result_file
-    Rails.logger.debug "data_points_contoller.download_result_file enter"
+    Rails.logger.debug "data_points_controller.download_result_file enter"
     @data_point = DataPoint.find(params[:id])
 
     file = @data_point.result_files.where(attachment_file_name: params[:filename]).first
@@ -439,7 +439,7 @@ class DataPointsController < ApplicationController
         format.html { redirect_to @data_point, notice: "Result file '#{params[:filename]}' does not exist. It probably was deleted from the file system." }
       end
     end
-    Rails.logger.debug "data_points_contoller.download_result_file leave"
+    Rails.logger.debug "data_points_controller.download_result_file leave"
   end
 
   def dencity
@@ -513,7 +513,7 @@ class DataPointsController < ApplicationController
   private
 
   def data_point_params
-    Rails.logger.debug "data_points_contoller.data_point_params enter"
+    Rails.logger.debug "data_points_controller.data_point_params enter"
     params.require(:data_point).permit!.to_h
   end
 end
