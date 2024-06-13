@@ -672,6 +672,16 @@ module DjJobs
       @sim_logger.info "Bundle install command: #{cmd}"
       pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [log_path, 'w'])
       Process.wait pid
+
+      # The install may fail if there are multiple workers (downloading the gems simultaneously). Check and re-run if necessary.
+      logtxt = File.read(log_path).lines
+      if logtxt.include? "error"
+        @sim_logger.info "re-installing gems due to error"
+        sleep(rand(60))
+        pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [log_path, 'w'])
+        Process.wait pid
+      end
+
       @sim_logger.info "gem installation complete"
       @sim_logger.info "bundle.log output: #{File.read(log_path).lines}"      
       #@sim_logger.info File.read(log_path).lines
