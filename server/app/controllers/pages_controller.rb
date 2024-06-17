@@ -70,7 +70,7 @@ class PagesController < ApplicationController
       aggregated_results.each do |res|
         # this is the format D3 wants the data in
         rec = {}
-        rec['label'] = res['_id']['status'] + ' ' + res['_id']
+        rec['label'] = res['_id']['status'] + ' ' + res['_id']['status_message']
         rec['label'].gsub!('completed completed', 'completed')
         rec['label'] = rec['label'].rstrip
         rec['value'] = res['count']
