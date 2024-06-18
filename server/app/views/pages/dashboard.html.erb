@@ -50,7 +50,7 @@
             <p>
               <% if not @current.end_time.nil? %>
                 End: <%= @current.end_time.strftime("%m/%d/%Y %H:%M:%S") %>
-              <% elsif @completed_perc > 10 %>
+              <% elsif @completed_perc > 10 %>  *** This needs to be fixed to be the current analysis.
                 <% etf = Time.at((Time.now-@current.start_time)/(@completed_perc/100.0)) %>
                 Estimated time to completion (H:M): <%= etf.strftime("%H:%M") %>
                 </p><p>Current time: <%= Time.now.strftime("%m/%d/%Y %H:%M:%S") %>
@@ -157,7 +157,7 @@
           defaultColor = "#333333",   //default color for values not in domain
           color = d3.scale.ordinal()     //builtin range of colors
           .domain(["completed normal", "completed datapoint failure", "started", "queued", "na"]) //all possible labels
-          .range(["#5cb85c", "#f0ad4e", "#ebccd1", "#5bc0de", "#428bca"]); //colors
+          .range (["#449d44",          "#d9534f",                     "#ec971f", "#428bca", "#5bc0de"]); //colors
 
           var vis = d3.select("#pie")
                   .append("svg:svg")              //create the SVG element inside the <body>
