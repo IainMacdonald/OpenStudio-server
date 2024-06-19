@@ -63,8 +63,10 @@ class PagesController < ApplicationController
     end
     # for js
     cnt = 0
+    complete = 0
     @js_res = []
     @total = 0
+    @percent_complete = 0
 
     unless @current.nil?
       aggregated_results.each do |res|
@@ -74,11 +76,15 @@ class PagesController < ApplicationController
         rec['label'].gsub!('completed completed', 'completed')
         rec['label'] = rec['label'].rstrip
         rec['value'] = res['count']
-        cnt += res['count'].to_i
         @js_res << rec
+        if res['_id']['status'] == 'completed' 
+          complete += res['count'].to_i
+        end
+        cnt += res['count'].to_i
       end
 
       @total = cnt
+      @percent_complete = 100.0 * complete / cnt
     end
   end
 end
