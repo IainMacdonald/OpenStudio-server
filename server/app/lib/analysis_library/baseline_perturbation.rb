@@ -134,7 +134,7 @@ class AnalysisLibrary::BaselinePerturbation < AnalysisLibrary::Base
               instance[var.id.to_s.to_sym] = var.static_value unless meas_var.include? var.id
             end
             # logger.info "instance: #{instance}"
-            #sleep 1
+            sleep 1
             samples << instance
           end
         end
