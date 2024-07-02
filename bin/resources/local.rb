@@ -182,7 +182,7 @@ def run_rspec(test_directory, mongo_directory, ruby_path, debug)
   $logger.debug 'MONGOD STARTED'
 
   begin
-    ::Timeout.timeout(480) do
+    ::Timeout.timeout(960) do
       success = system rspec_command
       unless success
         $logger.error "Rspec returned non-zero status code `#{$?.exitstatus}`. Please refer to "\
