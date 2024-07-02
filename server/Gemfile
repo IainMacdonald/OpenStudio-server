@@ -20,6 +20,7 @@ gem 'tzinfo-data', '~>1.2021.1'
 gem 'loofah',  '2.20.0'
 
 # database modules
+gem 'mongo', '2.18.3'
 gem 'mongoid', '7.5.4'
 gem 'mongoid-paperclip', '~> 0.1.0'
 
