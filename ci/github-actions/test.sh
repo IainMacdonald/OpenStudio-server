@@ -47,12 +47,25 @@ else
         echo "Unit tests failed with status $exit_status"
         exit $exit_status
     elif [ "${BUILD_TYPE}" == "integration" ]; then
-        #    run the analysis integration specs - everything in root directory
-        #    use same environment as PAT
+        # run the analysis integration specs - everything in root directory
+        # use same environment as PAT
         export RAILS_ENV=local
 
-        #    explicitly set directory.  Probably unnecessary
+        # explicitly set directory.  Probably unnecessary
         cd $GITHUB_WORKSPACE
+
+        # Debugging information
+        echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+        echo "PATH: $PATH"
+        echo "RUBYLIB: $RUBYLIB"
+        echo "OPENSTUDIO_TEST_EXE: $OPENSTUDIO_TEST_EXE"
+        echo "RUBY_VERSION: $(ruby -v)"
+        echo "BUNDLE_EXEC_PATH: $(which bundle)"
+        echo "BUNDLE_EXEC_RUBY_PATH: $(head -n 1 $(which bundle) | cut -d ' ' -f 2)"
+        echo "Checking if Ruby exists at BUNDLE_EXEC_RUBY_PATH"
+        ls -l $(head -n 1 $(which bundle) | cut -d ' ' -f 2)
+
+        # Install the bundle
         bundle install
         echo "Beginning integration tests. RUBYLIB=$RUBYLIB ; OPENSTUDIO_TEST_EXE=$OPENSTUDIO_TEST_EXE"
         bundle exec rspec; (( exit_status = exit_status || $? ))
