@@ -77,12 +77,11 @@ else
         which bundle
         echo "RUBY_PATH: $RUBY_PATH"
         which ruby
-        # Fix the shebang line in the bundle script
         echo "Fixing the shebang line in the bundle script"
-        # sed -i.bak "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        sed -i.bak "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
         head -n 1 $BUNDLE_PATH
         echo "Content of the bundle script:"
-        cat /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/bundle
+        cat $BUNDLE_PATH
         # Install the bundle
         bundle install
         echo "Beginning integration tests. RUBYLIB=$RUBYLIB ; OPENSTUDIO_TEST_EXE=$OPENSTUDIO_TEST_EXE"
