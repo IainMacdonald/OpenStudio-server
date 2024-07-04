@@ -742,7 +742,7 @@ end
 class RunAnalysis
   require_relative 'resources/remote.rb'
   BATCH_RUN_METHODS = %w(lhs preflight single_run repeat_run doe diag baseline_perturbation batch_datapoints).freeze
-
+  puts "RunAnalysis Environment is: #{::ENV.inspect}"
   # Provides text for the main help functionality
   def self.synopsis
     'Runs an analysis on an OS Server instance'
@@ -755,7 +755,7 @@ class RunAnalysis
   #
   def execute(sub_argv)
     $logger.debug "sub_argv = #{sub_argv} in RunAnalysis execute"
-    # $logger.debug "Environment is: #{::ENV.inspect}"
+    $logger.debug "RunAnalysis Environment is: #{::ENV.inspect}"
     $logger.debug 'Requiring gems for RunAnalysis'
     $logger.debug 'Requiring zip gem'
     require 'zip'
