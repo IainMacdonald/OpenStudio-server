@@ -73,13 +73,11 @@ else
         echo "PATH: $PATH"
         echo "RUBYLIB: $RUBYLIB"
         echo "OPENSTUDIO_TEST_EXE: $OPENSTUDIO_TEST_EXE"
-        echo "RUBY_VERSION: $(ruby -v)"
-        echo "RUBY_PATH: $(which ruby)"
-        echo "BUNDLE_EXEC_PATH: $(which bundle)"
-        echo "BUNDLE_EXEC_RUBY_PATH: $(head -n 1 $(which bundle) | cut -d ' ' -f 2)"
+        echo "BUNDLE_PATH: $BUNDLE_PATH"
+        which bundle
+        echo "RUBY_PATH: $RUBY_PATH"
+        which ruby
         # Fix the shebang line in the bundle script
-        BUNDLE_PATH=$(which bundle)
-        RUBY_PATH=$(which ruby)
         echo "Fixing the shebang line in the bundle script"
         # sed -i.bak "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
         head -n 1 $BUNDLE_PATH
