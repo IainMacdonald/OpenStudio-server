@@ -100,18 +100,6 @@ else
         echo "Content of the bundle script:"
         cat $BUNDLE_PATH
 
-        # Add debugging print statement to the bundle script
-        echo "Adding debugging print statement to the bundle script"
-        if [ "${ImageOS}" == "macos13" ]; then
-            sed -i '' '2i\
-            echo "Debug: Running bundle script"; echo "PATH: $PATH"; echo "GEM_HOME: $GEM_HOME"; echo "GEM_PATH: $GEM_PATH"; which ruby; ruby -v
-            ' $BUNDLE_PATH
-        else
-            sed -i '2i\
-            echo "Debug: Running bundle script"; echo "PATH: $PATH"; echo "GEM_HOME: $GEM_HOME"; echo "GEM_PATH: $GEM_PATH"; which ruby; ruby -v
-            ' $BUNDLE_PATH
-        fi
-
         # Confirm the addition of the debug print statement
         head -n 10 $BUNDLE_PATH
         echo "Content of the bundle script after modification:"
