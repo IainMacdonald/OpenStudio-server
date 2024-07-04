@@ -85,28 +85,37 @@ else
         echo "Fixing the shebang line in the bundle and bundler scripts"
         if [ "${ImageOS}" == "macos13" ]; then
             sed -i '' "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
-            sed -i '' "1s|.*|#!${RUBY_PATH}|" $BUNDLER_PATH
         else
             sed -i "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
-            sed -i "1s|.*|#!${RUBY_PATH}|" $BUNDLER_PATH
         fi
 
         # Remove additional lines added by RubyGems
         if [ "${ImageOS}" == "macos13" ]; then
             sed -i '' '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLE_PATH
-            sed -i '' '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLER_PATH
         else
             sed -i '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLE_PATH
-            sed -i '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLER_PATH
         fi
 
         head -n 1 $BUNDLE_PATH
         echo "Content of the bundle script:"
         cat $BUNDLE_PATH
 
-        head -n 1 $BUNDLER_PATH
-        echo "Content of the bundler script:"
-        cat $BUNDLER_PATH
+        # Add debugging print statement to the bundle script
+        echo "Adding debugging print statement to the bundle script"
+        if [ "${ImageOS}" == "macos13" ]; then
+            sed -i '' '2i\
+            echo "Debug: Running bundle script"; echo "PATH: $PATH"; echo "GEM_HOME: $GEM_HOME"; echo "GEM_PATH: $GEM_PATH"; which ruby; ruby -v
+            ' $BUNDLE_PATH
+        else
+            sed -i '2i\
+            echo "Debug: Running bundle script"; echo "PATH: $PATH"; echo "GEM_HOME: $GEM_HOME"; echo "GEM_PATH: $GEM_PATH"; which ruby; ruby -v
+            ' $BUNDLE_PATH
+        fi
+
+        # Confirm the addition of the debug print statement
+        head -n 10 $BUNDLE_PATH
+        echo "Content of the bundle script after modification:"
+        cat $BUNDLE_PATH
     
         # Install the bundle
         bundle install
