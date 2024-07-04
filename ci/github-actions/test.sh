@@ -75,20 +75,38 @@ else
         echo "OPENSTUDIO_TEST_EXE: $OPENSTUDIO_TEST_EXE"
         
         BUNDLE_PATH=$(which bundle)
+        BUNDLER_PATH=$(which bundler)
         RUBY_PATH=$(which ruby)
         echo "BUNDLE_PATH: $BUNDLE_PATH"
+        echo "BUNDLER_PATH: $BUNDLER_PATH"
         echo "RUBY_PATH: $RUBY_PATH"
 
         # Fix the shebang line in the bundle and bundler scripts
         echo "Fixing the shebang line in the bundle and bundler scripts"
-        sed -i "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        if [ "${ImageOS}" == "macos13" ]; then
+            sed -i '' "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+            sed -i '' "1s|.*|#!${RUBY_PATH}|" $BUNDLER_PATH
+        else
+            sed -i "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+            sed -i "1s|.*|#!${RUBY_PATH}|" $BUNDLER_PATH
+        fi
 
         # Remove additional lines added by RubyGems
-        sed -i '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLE_PATH
+        if [ "${ImageOS}" == "macos13" ]; then
+            sed -i '' '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLE_PATH
+            sed -i '' '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLER_PATH
+        else
+            sed -i '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLE_PATH
+            sed -i '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLER_PATH
+        fi
 
         head -n 1 $BUNDLE_PATH
         echo "Content of the bundle script:"
         cat $BUNDLE_PATH
+
+        head -n 1 $BUNDLER_PATH
+        echo "Content of the bundler script:"
+        cat $BUNDLER_PATH
     
         # Install the bundle
         bundle install
