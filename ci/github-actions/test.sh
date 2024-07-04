@@ -81,7 +81,7 @@ else
         BUNDLE_PATH=$(which bundle)
         RUBY_PATH=$(which ruby)
         echo "Fixing the shebang line in the bundle script"
-        sed -i.bak "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        # sed -i.bak "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
         head -n 1 $BUNDLE_PATH
         echo "Content of the bundle script:"
         cat /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/bundle
