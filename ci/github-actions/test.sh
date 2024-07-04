@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Print current bundle configuration for debugging
+echo "Current Bundler Configuration:"
+bundle config
+
 # platform-specific config here (also in setup.sh):
 if [ "${ImageOS}" == "macos13" ]; then
     # Dir containing openstudio
