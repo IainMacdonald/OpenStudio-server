@@ -125,6 +125,8 @@ else
         export PATH=/usr/local/ruby/bin:/usr/local/bin:/usr/local/openstudio-${OPENSTUDIO_VERSION}${OPENSTUDIO_VERSION_EXT}/bin:${PATH}
         export GEM_HOME="$GITHUB_WORKSPACE/gems"
         export GEM_PATH="$GITHUB_WORKSPACE/gems:$GITHUB_WORKSPACE/gems/bundler/gems"
+        mkdir -p $GEM_HOME/bin
+        ln -s /usr/local/ruby/bin/ruby $GEM_HOME/bin/ruby
     fi
     echo "verifying os installation"
     unset BUNDLE_GEMFILE && openstudio openstudio_version

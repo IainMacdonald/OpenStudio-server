@@ -77,7 +77,6 @@ else
         BUNDLE_PATH=$(which bundle)
         BUNDLER_PATH=$(which bundler)
         RUBY_PATH=$(which ruby)
-        export RUBY_PATH=$(which ruby)
         echo "BUNDLE_PATH: $BUNDLE_PATH"
         echo "BUNDLER_PATH: $BUNDLER_PATH"
         echo "RUBY_PATH: $RUBY_PATH"
