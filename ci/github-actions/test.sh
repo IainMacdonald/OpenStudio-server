@@ -73,12 +73,20 @@ else
         echo "PATH: $PATH"
         echo "RUBYLIB: $RUBYLIB"
         echo "OPENSTUDIO_TEST_EXE: $OPENSTUDIO_TEST_EXE"
+        
+        BUNDLE_PATH=$(which bundle)
+        RUBY_PATH=$(which ruby)
         echo "BUNDLE_PATH: $BUNDLE_PATH"
-        which bundle
         echo "RUBY_PATH: $RUBY_PATH"
-        which ruby
+
+        # Fix the shebang line in the bundle script
         echo "Fixing the shebang line in the bundle script"
-        sed -i.bak "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        if [ "${ImageOS}" == "macos13" ]; then
+            sed -i '' "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        else
+            sed -i "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        fi
+
         head -n 1 $BUNDLE_PATH
         echo "Content of the bundle script:"
         cat $BUNDLE_PATH
