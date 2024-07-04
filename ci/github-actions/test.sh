@@ -22,6 +22,16 @@ elif [ "${ImageOS}" == "ubuntu22" ]; then
     mongo_dir="/usr/bin"
 fi
 
+echo "PATH: $PATH"
+echo "RUBYLIB: $RUBYLIB"
+echo "GEM_HOME: $GEM_HOME"
+echo "GEM_PATH: $GEM_PATH"
+echo "OPENSTUDIO_TEST_EXE: $OPENSTUDIO_TEST_EXE"
+
+# List contents of /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/
+echo "Contents of /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/:"
+ls -l /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/
+
 # Env variables set in setup.sh do not seem to be available in test.sh
 if [ "${ImageOS}" == "docker" ]; then
     echo "Skipping tests for docker builds"
@@ -37,6 +47,10 @@ else
         # Threadsafe test requires higher ulimit to avoid EMFILE error
         ulimit -n
         ulimit -n 1024
+        which ruby
+        ruby -v
+        echo "Content of the bundle script:"
+        cat /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/bundle
         ruby "${GITHUB_WORKSPACE}/bin/openstudio_meta" run_rspec --debug --verbose --mongo-dir="$mongo_dir" --openstudio-exe="$OPENSTUDIO_TEST_EXE" "${GITHUB_WORKSPACE}/spec/unit-test"
         exit_status=$?
         if [ $exit_status == 0 ];then
@@ -69,7 +83,8 @@ else
         echo "Fixing the shebang line in the bundle script"
         sed -i.bak "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
         head -n 1 $BUNDLE_PATH
-
+        echo "Content of the bundle script:"
+        cat /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/bundle
         # Install the bundle
         bundle install
         echo "Beginning integration tests. RUBYLIB=$RUBYLIB ; OPENSTUDIO_TEST_EXE=$OPENSTUDIO_TEST_EXE"
