@@ -770,19 +770,30 @@ class RunAnalysis
     puts "GEM_PATH: #{ENV['GEM_PATH']}"
     puts "RUBYLIB: #{ENV['RUBYLIB']}"
     puts "OPENSTUDIO_TEST_EXE: #{ENV['OPENSTUDIO_TEST_EXE']}"
-    # Add debugging statements to print paths of bundle, bundler, and ruby
-    def print_paths
-      bundle_path = `which bundle`.strip
-      bundler_path = `which bundler`.strip
-      ruby_path = `which ruby`.strip
-    
-      puts "BLB BUNDLE_PATH: #{bundle_path}"
-      puts "BUNDLER_PATH: #{bundler_path}"
-      puts "RUBY_PATH: #{ruby_path}"
+# Method to print paths and contents of the bundle script
+def print_paths_and_bundle_script
+  bundle_path = `which bundle`.strip
+  bundler_path = `which bundler`.strip
+  ruby_path = `which ruby`.strip
+
+  puts "BUNDLE_PATH: #{bundle_path}"
+  puts "BUNDLER_PATH: #{bundler_path}"
+  puts "RUBY_PATH: #{ruby_path}"
+
+  if File.exist?(bundle_path)
+    puts "Content of the bundle script:"
+    puts "------------------------------------"
+    File.open(bundle_path, "r") do |file|
+      file.each_line { |line| puts line }
     end
-    
-    # Call the method to print the paths
-    print_paths
+    puts "------------------------------------"
+  else
+    puts "Bundle script not found at #{bundle_path}"
+  end
+end
+
+# Call the method to print the paths and bundle script content
+print_paths_and_bundle_script
     
     $logger.debug 'Requiring gems for RunAnalysis'
     $logger.debug 'Requiring zip gem'
