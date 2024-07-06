@@ -11,7 +11,7 @@ if [ "${ImageOS}" == "macos13" ]; then
     export GEM_HOME="$GITHUB_WORKSPACE/gems"
     export GEM_PATH="$GITHUB_WORKSPACE/gems:$GITHUB_WORKSPACE/gems/bundler/gems"
     mongo_dir="/usr/local/bin"
-elif [ "${ImageOS}" == "ubuntu20" ]; then
+elif [ "${ImageOS}" == "ubuntu22" ]; then
     # Dir containing openstudio
     export ENERGYPLUS_EXE_PATH=/usr/local/openstudio-${OPENSTUDIO_VERSION}${OPENSTUDIO_VERSION_EXT}/EnergyPlus/energyplus
     export PATH=/usr/local/ruby/bin:/usr/bin:/usr/local/openstudio-${OPENSTUDIO_VERSION}${OPENSTUDIO_VERSION_EXT}/bin:${PATH}
@@ -21,6 +21,16 @@ elif [ "${ImageOS}" == "ubuntu20" ]; then
     export OPENSTUDIO_TEST_EXE="/usr/local/openstudio-${OPENSTUDIO_VERSION}${OPENSTUDIO_VERSION_EXT}/bin/openstudio"
     mongo_dir="/usr/bin"
 fi
+
+echo "PATH: $PATH"
+echo "RUBYLIB: $RUBYLIB"
+echo "GEM_HOME: $GEM_HOME"
+echo "GEM_PATH: $GEM_PATH"
+echo "OPENSTUDIO_TEST_EXE: $OPENSTUDIO_TEST_EXE"
+
+# List contents of /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/
+echo "Contents of /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/:"
+ls -l /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/
 
 # Env variables set in setup.sh do not seem to be available in test.sh
 if [ "${ImageOS}" == "docker" ]; then
@@ -37,6 +47,10 @@ else
         # Threadsafe test requires higher ulimit to avoid EMFILE error
         ulimit -n
         ulimit -n 1024
+        which ruby
+        ruby -v
+        echo "Content of the bundle script:"
+        cat /home/runner/work/OpenStudio-server/OpenStudio-server/gems/bin/bundle
         ruby "${GITHUB_WORKSPACE}/bin/openstudio_meta" run_rspec --debug --verbose --mongo-dir="$mongo_dir" --openstudio-exe="$OPENSTUDIO_TEST_EXE" "${GITHUB_WORKSPACE}/spec/unit-test"
         exit_status=$?
         if [ $exit_status == 0 ];then
@@ -47,12 +61,51 @@ else
         echo "Unit tests failed with status $exit_status"
         exit $exit_status
     elif [ "${BUILD_TYPE}" == "integration" ]; then
-        #    run the analysis integration specs - everything in root directory
-        #    use same environment as PAT
+        # run the analysis integration specs - everything in root directory
+        # use same environment as PAT
         export RAILS_ENV=local
 
-        #    explicitly set directory.  Probably unnecessary
+        # explicitly set directory.  Probably unnecessary
         cd $GITHUB_WORKSPACE
+
+        # Debugging information
+        echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+        echo "PATH: $PATH"
+        echo "RUBYLIB: $RUBYLIB"
+        echo "OPENSTUDIO_TEST_EXE: $OPENSTUDIO_TEST_EXE"
+        
+        BUNDLE_PATH=$(which bundle)
+        BUNDLER_PATH=$(which bundler)
+        RUBY_PATH=$(which ruby)
+        echo "BUNDLE_PATH: $BUNDLE_PATH"
+        echo "BUNDLER_PATH: $BUNDLER_PATH"
+        echo "RUBY_PATH: $RUBY_PATH"
+
+        # Fix the shebang line in the bundle and bundler scripts
+        echo "Fixing the shebang line in the bundle and bundler scripts"
+        if [ "${ImageOS}" == "macos13" ]; then
+            sed -i '' "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        else
+            sed -i "1s|.*|#!${RUBY_PATH}|" $BUNDLE_PATH
+        fi
+
+        # Remove additional lines added by RubyGems
+        if [ "${ImageOS}" == "macos13" ]; then
+            sed -i '' '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLE_PATH
+        else
+            sed -i '/_=_\\/,/#!\/usr\/bin\/env ruby/d' $BUNDLE_PATH
+        fi
+
+        head -n 1 $BUNDLE_PATH
+        echo "Content of the bundle script:"
+        cat $BUNDLE_PATH
+
+        # Confirm the addition of the debug print statement
+        head -n 10 $BUNDLE_PATH
+        echo "Content of the bundle script after modification:"
+        cat $BUNDLE_PATH
+    
+        # Install the bundle
         bundle install
         echo "Beginning integration tests. RUBYLIB=$RUBYLIB ; OPENSTUDIO_TEST_EXE=$OPENSTUDIO_TEST_EXE"
         bundle exec rspec; (( exit_status = exit_status || $? ))

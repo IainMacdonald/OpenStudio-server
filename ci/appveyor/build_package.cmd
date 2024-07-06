@@ -1,6 +1,6 @@
 REM set PATH=C:\projects\ruby\bin;C:\Program Files\Git\mingw64\bin;C:\projects\openstudio\bin;%PATH%
-set PATH=C:\Ruby27-x64\bin;C:\Program Files\Git\mingw64\bin;C:\projects\openstudio\bin;%PATH%
-set BUNDLE_VERSION=2.1.4
+set PATH=C:\Ruby32-x64\bin;C:\Program Files\Git\mingw64\bin;C:\projects\openstudio\bin;%PATH%
+set BUNDLE_VERSION=2.4.10
 set GEM_HOME=C:\projects\openstudio-server\gems
 set GEM_PATH=C:\projects\openstudio-server\gems;C:\projects\openstudio-server\gems\gems\bundler\gems
 set RUBYLIB=C:\projects\openstudio\Ruby

@@ -4,19 +4,19 @@
 # NOTES:            Currently this is one big dockerfile and non-optimal.
 
 #may include suffix
-ARG OPENSTUDIO_VERSION=3.7.0
-FROM nrel/openstudio:3.7.0 as base
+ARG OPENSTUDIO_VERSION=3.8.0
+FROM nrel/openstudio:3.8.0 as base
 MAINTAINER Nicholas Long nicholas.long@nrel.gov
 
 ENV DEBIAN_FRONTEND=noninteractive
 # Install required libaries.
 #   realpath - needed for wait-for-it
-RUN apt-get update && apt-get install -y wget gnupg \
-    && wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add - \
-    && echo "deb http://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | \
-    tee /etc/apt/sources.list.d/mongodb-org-6.0.list \
+RUN apt-get update && apt-get install -y wget gnupg lsb-release \
+    && wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | gpg --dearmor | tee /usr/share/keyrings/mongodb-org-6.0-archive-keyring.gpg \
+    && echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-org-6.0-archive-keyring.gpg] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
+        mongodb-org \
         apt-transport-https \
         autoconf \
         bison \
@@ -76,7 +76,7 @@ ENV PERL_EXE_PATH /usr/bin
 # Specify a couple arguments here, after running the majority of the installation above
 ARG rails_env=docker
 ARG bundle_args="--without development test"
-ENV OS_BUNDLER_VERSION=2.1.4
+ENV OS_BUNDLER_VERSION=2.4.10
 
 # Set the rails env var
 ENV RAILS_ENV $rails_env
@@ -133,8 +133,8 @@ RUN chmod +x /opt/openstudio/server/bin/*
 ENV OPENSTUDIO_EXE_PATH /usr/local/bin/openstudio
 
 # Remove leftover install files from openstudio base container
-RUN rm /OpenStudio-*.deb
-RUN rm /ruby-2.7.2.tar.gz
+#RUN rm /OpenStudio-*.deb
+#RUN rm /ruby-3.2.2.tar.gz
 
 ENTRYPOINT ["rails-entrypoint"]
 

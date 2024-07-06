@@ -4,8 +4,8 @@ image: Visual Studio 2019
 
 environment:
   USE_TESTING_TIMEOUTS: "true"
-  OPENSTUDIO_VERSION: 3.7.0
-  OPENSTUDIO_VERSION_SHA: d5269793f1
+  OPENSTUDIO_VERSION: 3.8.0
+  OPENSTUDIO_VERSION_SHA: f953b6fcaf
   OPENSTUDIO_VERSION_EXT: ""
   OPENSTUDIO_TEST_EXE: C:\projects\openstudio\bin\openstudio.exe
   BUILD_TYPE: "test"
@@ -16,13 +16,13 @@ artifacts:
     name: oss.tar.gz
 
 init:
-    #- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  #- ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 clone_folder: C:\projects\openstudio-server
 
 install:
 # set PATH pre-installed ruby version
-  - set PATH=C:\Ruby27-x64\bin;C:\Mongodb\bin;%PATH%
+  - set PATH=C:\Ruby32-x64\bin;C:\Mongodb\bin;%PATH%
   - C:\projects\openstudio-server\ci\appveyor\setup_ruby.cmd
   - C:\projects\openstudio-server\ci\appveyor\setup.cmd
 
@@ -33,12 +33,16 @@ before_test:
   - cmd: gem -v
   - cmd: bundle -v
   - cmd: mongod.exe --version
+  - cmd: git --version
+  - cmd: gem list
+  - cmd: echo %PATH%
 
 test_script:
   - ps: C:\projects\openstudio-server\ci\appveyor\integration-test.ps1
   - cmd: C:\projects\openstudio-server\ci\appveyor\unit-test.cmd
   - cmd: C:\projects\openstudio-server\ci\appveyor\build_package.cmd #artifact upload occurs before on_finish
 on_finish:
+  - cmd: echo FINISHED TEST_SCRIPTS
   - cmd: C:\projects\openstudio-server\ci\appveyor\print_logs.cmd
   #- ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 on_failure:

@@ -6,7 +6,7 @@ sleep 5
 docker volume rm -f osdata || true
 docker volume rm -f dbdata || true
 #docker image rm 127.0.0.1:5000/openstudio-server -f
-docker build . -t="127.0.0.1:5000/openstudio-server" --build-arg OPENSTUDIO_VERSION=3.7.0
+docker build . -t="127.0.0.1:5000/openstudio-server" --build-arg OPENSTUDIO_VERSION=3.8.0
 docker push 127.0.0.1:5000/openstudio-server
 cd docker/R
 #docker image rm 127.0.0.1:5000/openstudio-rserve -f
@@ -22,6 +22,6 @@ cd ../../local_setup_scripts/win64
 docker stack deploy osserver --compose-file=docker-compose.yml
 while ( nc -zv 127.0.0.1 80 3>&1 1>&2- 2>&3- ) | awk -F ":" '$3 != " Connection refused" {exit 1}'; do sleep 5; done
 #docker service update --restart-condition none osserver_worker
-docker service scale osserver_worker=2
+docker service scale osserver_worker=1
 echo 'osserver stack rebuilt and redeployed'
 

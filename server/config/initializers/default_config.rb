@@ -6,8 +6,13 @@
 # Load in the APP_CONFIG
 # Read in default config settings unique to this application.
 path = File.join(Rails.root, '/config/config.yml')
-APP_CONFIG = YAML.load(ERB.new(File.new(path).read).result)[Rails.env]
-
+# https://bugs.ruby-lang.org/issues/17866
+begin
+  APP_CONFIG = YAML.load(ERB.new(File.new(path).read).result, aliases: true)[Rails.env]
+rescue => e
+   puts "RESCUE: #{e.message}"
+   raise
+end
 # Go through and interpret some of the variables
 APP_CONFIG['r_scripts_path'] = File.expand_path(APP_CONFIG['r_scripts_path'].gsub(':rails_root', Rails.root.to_s))
 APP_CONFIG['ruby_bin_dir'] = APP_CONFIG['ruby_bin_dir'].gsub(':ruby_bin_dir', RbConfig::CONFIG['bindir'])

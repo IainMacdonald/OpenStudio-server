@@ -1,6 +1,6 @@
 {
   "analysis": {
-    "display_name": "Test Model",
+    "display_name": "Test custom Gemfile",
     "name": "test_model",
     "output_variables": [],
     "problem": {
