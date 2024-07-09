@@ -22,9 +22,10 @@ clone_folder: C:\projects\openstudio-server
 
 install:
 # set PATH pre-installed ruby version
-  #- set PATH=C:\Ruby32-x64\bin;C:\Mongodb\bin;%PATH%
-  #- C:\projects\openstudio-server\ci\appveyor\setup_ruby.cmd
-  #- C:\projects\openstudio-server\ci\appveyor\setup.cmd
+  - ps: C:\projects\openstudio-server\ci\appveyor\install-ruby.ps1
+  - set PATH=C:\Ruby32-x64\bin;C:\Mongodb\bin;%PATH%
+  - C:\projects\openstudio-server\ci\appveyor\setup_ruby.cmd
+  - C:\projects\openstudio-server\ci\appveyor\setup.cmd
 
 build: off
 
@@ -38,12 +39,12 @@ before_test:
   - cmd: echo %PATH%
 
 test_script:
-  #- ps: C:\projects\openstudio-server\ci\appveyor\integration-test.ps1
-  #- cmd: C:\projects\openstudio-server\ci\appveyor\unit-test.cmd
-  #- cmd: C:\projects\openstudio-server\ci\appveyor\build_package.cmd #artifact upload occurs before on_finish
+  - ps: C:\projects\openstudio-server\ci\appveyor\integration-test.ps1
+  - cmd: C:\projects\openstudio-server\ci\appveyor\unit-test.cmd
+  - cmd: C:\projects\openstudio-server\ci\appveyor\build_package.cmd #artifact upload occurs before on_finish
 on_finish:
   - cmd: echo FINISHED TEST_SCRIPTS
-  #- cmd: C:\projects\openstudio-server\ci\appveyor\print_logs.cmd
+  - cmd: C:\projects\openstudio-server\ci\appveyor\print_logs.cmd
   - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 on_failure:
   - cmd: C:\projects\openstudio-server\ci\appveyor\print_logs.cmd
