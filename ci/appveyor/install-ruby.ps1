@@ -23,7 +23,7 @@ if (Test-Path $rubyInstallDir) {
 }
 
 # Download and install 64-bit Ruby 3.2.2 from RubyInstaller website
-$rubyInstallerUrl = "https://rubyinstaller.org/downloads/archives/rubyinstaller-3.2.2-1-x64.exe"
+$rubyInstallerUrl = "https://github.com/oneclick/rubyinstaller2/releases/download/RubyInstaller-3.2.2-1/rubyinstaller-3.2.2-1-x64.exe"
 $installerPath = "C:\rubyinstaller-3.2.2-1-x64.exe"
 
 Write-Host "Downloading 64-bit Ruby 3.2.2 installer..."
