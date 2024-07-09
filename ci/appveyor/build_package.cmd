@@ -9,12 +9,9 @@ set OPENSTUDIO_TEST_EXE=C:\projects\openstudio\bin\openstudio
 REM set mongo_dir??
 cd c:\
 mkdir export
-echo Uninstalling conflicting json gem version...
-gem uninstall json -v 2.6.3 --force --executables
-if %errorlevel% NEQ 0 (
-    echo Failed to uninstall json gem version 2.6.3
-    exit /b 1
-)
+echo installing json gem version 2.7.2
+gem install json -v 2.7.2
+echo openstudio_meta install_gems
 ruby C:\projects\openstudio-server\bin\openstudio_meta install_gems --export="C:\export"
 mv C:\export C:\projects\openstudio-server\export
 dir C:\projects\openstudio-server\export
