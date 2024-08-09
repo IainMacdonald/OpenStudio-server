@@ -11,6 +11,7 @@ module ResqueJobs
     def self.after_enqueue(data_point_id, options = {})
       d = DataPoint.find(data_point_id)
       d.set_queued_state
+      d.add_to_rails_log("DataPoint #{data_point_id} enqueued for processing.")
     end
 
     def self.perform(data_point_id, options = {})
@@ -29,7 +30,16 @@ module ResqueJobs
       else
         msg = "SKIPPING #{data_point_id} since it is #{statuses[:status]} and #{statuses[:status_message]}"
         d.add_to_rails_log(msg)
-      end      
+      end 
+    rescue Errno::ENOSPC, Resque::DirtyExit, Resque::TermException, Resque::PruneDeadWorkerDirtyExit => e
+      # Log the termination and re-enqueue attempt
+      d.add_to_rails_log("Worker Caught Exception: #{e.inspect}: Re-enqueueing DataPoint ID #{data_point_id}")
+      Resque.enqueue(self, data_point_id, options)
+      d.add_to_rails_log("DataPoint #{data_point_id} re-enqueued.")
+    rescue => e
+      d.add_to_rails_log("Worker Caught Unhandled Exception: #{e.message}: Re-enqueueing DataPoint ID #{data_point_id}")
+      Resque.enqueue(self, data_point_id, options)
+      d.add_to_rails_log("Unhandled exception, re-enqueued DataPoint.")
     end
   end
 end
