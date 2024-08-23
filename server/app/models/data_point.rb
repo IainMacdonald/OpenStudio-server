@@ -125,6 +125,16 @@ class DataPoint
     self.status_message = 'datapoint canceled'
     save!
   end
+  
+  def set_soft_canceled_state
+    Rails.logger.debug "data_point.set_soft_canceled_state"
+    #destroy_background_job # destroy queued job
+    self.run_start_time ||= Time.now
+    self.run_end_time = Time.now
+    self.status = :completed
+    self.status_message = 'datapoint canceled'
+    save!
+  end
 
   def set_queued_state
     Rails.logger.debug "data_point.set_queued_state"
@@ -171,6 +181,7 @@ class DataPoint
     elsif Rails.application.config.job_manager == :resque
       if job_id
         Resque::Job.destroy(:simulations, 'ResqueJobs::RunSimulateDataPoint', job_id)
+        Resque::Job.destroy(:requeued, 'ResqueJobs::RunSimulateDataPoint', job_id)
       end
     else
       raise 'Rails.application.config.job_manager must be set to :resque or :delayed_job'
