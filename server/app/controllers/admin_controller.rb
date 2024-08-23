@@ -21,6 +21,46 @@ class AdminController < ApplicationController
     @os_cli = version ? version.strip : 'Unknown'
   end
 
+  def prune_resque_workers
+    Rails.logger.warn "Pruning Dead Resque Workers"
+
+    # Enqueue a new job
+    worker = Resque::Worker.new()
+    worker.prune_dead_workers
+    worker.shutdown    
+
+    respond_to do |format|
+      format.html { redirect_to admin_index_path, notice: 'Resque Workers Pruned.' }
+      format.json { head :no_content }
+    end
+  end
+
+  # POST /jobs/requeue_failed
+  def requeue_failed
+    Rails.logger.warn "Requeueing Failed Jobs to 'requeued' Queue"
+
+    requeued_count = 0
+
+    Resque::Failure.each do |id, failed_job|
+      payload = failed_job['payload']
+      job_class = payload['class']
+      job_args = payload['args']
+
+      # Requeue the job to the 'requeued' queue
+      Resque.enqueue_to('requeued', job_class.constantize, *job_args)
+      # Remove the job from the failed queue
+      Resque::Failure.remove(id)
+      requeued_count += 1
+    end
+
+    Rails.logger.info "#{requeued_count} jobs successfully requeued to 'requeued' queue by requeue_failed"
+
+    respond_to do |format|
+      format.html { redirect_to admin_index_path, notice: "#{requeued_count} Resque jobs requeued." }
+      format.json { render json: { message: "#{requeued_count} jobs requeued to 'requeued' queue" }, status: :ok }
+    end
+  end
+
   def backup_database
     logger.info params
     write_and_send_data
