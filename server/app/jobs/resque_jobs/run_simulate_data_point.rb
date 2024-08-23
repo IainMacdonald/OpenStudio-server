@@ -25,21 +25,25 @@ module ResqueJobs
       if !(statuses[:status] == 'completed' && statuses[:status_message] == 'completed normal')
         msg = "RUNNING DJ: #{statuses[:status]} and #{statuses[:status_message]}"
         d.add_to_rails_log(msg)
+        puts msg
         job = DjJobs::RunSimulateDataPoint.new(data_point_id, options)
         job.perform
       else
         msg = "SKIPPING #{data_point_id} since it is #{statuses[:status]} and #{statuses[:status_message]}"
         d.add_to_rails_log(msg)
+        puts msg
       end 
-    rescue Errno::ENOSPC, Resque::DirtyExit, Resque::TermException, Resque::PruneDeadWorkerDirtyExit => e
+    rescue SignalException, Errno::ENOSPC, Resque::DirtyExit, Resque::TermException, Resque::PruneDeadWorkerDirtyExit => e
       # Log the termination and re-enqueue attempt
-      d.add_to_rails_log("Worker Caught Exception: #{e.inspect}: Re-enqueueing DataPoint ID #{data_point_id}")
-      Resque.enqueue(self, data_point_id, options)
-      d.add_to_rails_log("DataPoint #{data_point_id} re-enqueued.")
+      d.add_to_rails_log("Worker Caught Exception: #{e.inspect}")#: Re-enqueueing DataPoint ID #{data_point_id}")
+      #Resque.enqueue_to(:requeued, self, data_point_id, options)
+      #puts "DataPoint #{data_point_id} re-enqueued."
+      puts "Worker Caught Exception: #{e.inspect}"
     rescue => e
-      d.add_to_rails_log("Worker Caught Unhandled Exception: #{e.message}: Re-enqueueing DataPoint ID #{data_point_id}")
-      Resque.enqueue(self, data_point_id, options)
-      d.add_to_rails_log("Unhandled exception, re-enqueued DataPoint.")
+      d.add_to_rails_log("Worker Caught Unhandled Exception: #{e.message}")#: Re-enqueueing DataPoint ID #{data_point_id}")
+      #Resque.enqueue_to(:requeued, self, data_point_id, options)
+      #puts "Unhandled exception, re-enqueued DataPoint."
+      puts "Worker Caught Unhandled Exception: #{e.message}"
     end
   end
 end

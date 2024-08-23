@@ -26,6 +26,7 @@ Rails.application.routes.draw do
         post :action
         post :upload
         get :stop
+        get :soft_stop
         get :status
         get :page_data
         get :analysis_data
@@ -84,6 +85,7 @@ Rails.application.routes.draw do
           post :upload_file
           delete :result_files
           post :requeue
+          post :requeue_started
         end
 
         collection do
@@ -98,6 +100,8 @@ Rails.application.routes.draw do
     collection do
       get :backup_database
       post :restore_database
+      post :prune_resque_workers
+      post :requeue_failed
     end
   end
 
