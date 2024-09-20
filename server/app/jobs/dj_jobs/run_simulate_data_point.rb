@@ -702,9 +702,27 @@ module DjJobs
       @sim_logger.info "oscli_env_unset: #{oscli_env_unset}"      
       cmd = "pwd && printenv && GEM_HOME=#{analysis_dir}/gems bundle install"
       @sim_logger.info "Bundle install command: #{cmd}"
-      pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [log_path, 'w'])
-      Process.wait pid
-      @sim_logger.info "gem installation complete"
+
+      # Install gems and check that the gems did successfully install. If not try again after a short pause.
+      retries = 3
+      fail = true
+      while retries > 0 && fail do
+        pid = Process.spawn(oscli_env_unset, cmd, [:err, :out] => [log_path, "w"])
+        Process.wait pid
+        logtxt = File.read(log_path).lines
+        fail = logtxt.include?("error")
+        if fail
+          @sim_logger.info "Trying to re-installing gems due to error..."
+          sleep(rand(30..90))
+          retries -= 1
+        end
+      end
+      if !fail
+        @sim_logger.info "Gem installation successful"
+      else
+        @sim_logger.info "Gem installation failed after 3 attempts"
+      end
+
       @sim_logger.info "bundle.log output: #{File.read(log_path).lines}"
       @sim_logger.info "replace Bundle config w orig"      
       replace_config_file
